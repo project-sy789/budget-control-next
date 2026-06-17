@@ -192,20 +192,20 @@ export default function DashboardPage() {
       )}
 
       {/* ── Charts Section ── */}
-      {filteredProjects.length > 0 && (
-        <>
-          {/* Chart controls */}
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            {/* Work Group Filter */}
-            {workGroups.length > 0 && (
-              <select value={workGroupFilter} onChange={e => setWorkGroupFilter(e.target.value)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium bg-white min-w-[120px]">
-                <option value="all">ทุกกลุ่มงาน</option>
-                {workGroups.map(wg => (
-                  <option key={wg.id || wg.name} value={wg.name}>{wg.name}</option>
-                ))}
-              </select>
-            )}
+      {/* Filter + Controls — always visible */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        {/* Work Group Filter */}
+        {workGroups.length > 0 && (
+          <select value={workGroupFilter} onChange={e => setWorkGroupFilter(e.target.value)}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium bg-white min-w-[120px]">
+            <option value="all">ทุกกลุ่มงาน</option>
+            {workGroups.map(wg => (
+              <option key={wg.id || wg.name} value={wg.name}>{wg.name}</option>
+            ))}
+          </select>
+        )}
+        {filteredProjects.length > 0 && (
+          <>
             <span className="text-gray-300">|</span>
             <span className="text-xs text-gray-500 mr-1">มุมมอง:</span>
             <button onClick={() => setChartMode('absolute')}
@@ -226,8 +226,13 @@ export default function DashboardPage() {
                 ⚠ {minorProjects.length} โครงการเล็กถูกรวมเป็น "อื่นๆ" (น้อยกว่า 3%)
               </span>
             )}
-          </div>
+          </>
+        )}
+      </div>
 
+      {/* Charts — only when data exists */}
+      {filteredProjects.length > 0 && (
+        <>
           <div className="grid lg:grid-cols-2 gap-6 mb-6">
             {/* Bar Chart */}
             <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
@@ -359,8 +364,16 @@ export default function DashboardPage() {
         <div className="grid lg:grid-cols-2 gap-6 mb-6">
           <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
             <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">ยังไม่มีข้อมูลโครงการ</p>
-            <p className="text-sm text-gray-400 mt-1">เพิ่มโครงการเพื่อดูกราฟเปรียบเทียบงบประมาณ</p>
+            <p className="text-gray-500 font-medium">
+              {workGroupFilter !== 'all' 
+                ? `ไม่มีโครงการในกลุ่มงาน "${workGroupFilter}"`
+                : 'ยังไม่มีข้อมูลโครงการ'}
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              {workGroupFilter !== 'all' 
+                ? 'ลองเปลี่ยนกลุ่มงานหรือเลือก "ทุกกลุ่มงาน" ด้านบน'
+                : 'เพิ่มโครงการเพื่อดูกราฟเปรียบเทียบงบประมาณ'}
+            </p>
           </div>
           <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
             <Table2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
