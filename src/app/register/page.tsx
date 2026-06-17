@@ -232,7 +232,7 @@ export default function RegisterPage() {
               type="text"
               value={schoolName}
               onChange={e => handleSchoolNameChange(e.target.value)}
-              placeholder="เช่น โรงเรียนซับใหญ่วิทยาคม"
+              placeholder="เช่น โรงเรียนสาธิตสามัคคีวิทยา"
               required
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-400 outline-none transition"
             />
@@ -248,7 +248,7 @@ export default function RegisterPage() {
                 type="text"
                 value={schoolSlug}
                 onChange={e => setSchoolSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                placeholder="sapyai"
+                placeholder="demo-school"
                 required
                 className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-400 outline-none transition font-mono"
               />

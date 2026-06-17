@@ -14,8 +14,8 @@ export async function getSiteConfig() {
   
   const config: any = {
     site_name: 'ระบบควบคุมงบประมาณ',
-    organization_name: 'โรงเรียนซับใหญ่วิทยาคม',
-    site_title: 'ระบบควบคุมงบประมาณ - โรงเรียนซับใหญ่วิทยาคม',
+    organization_name: 'โรงเรียนสาธิตสามัคคีวิทยา',
+    site_title: 'ระบบควบคุมงบประมาณ - โรงเรียนสาธิตสามัคคีวิทยา',
     site_icon: '',
     enable_pwa: true,
     year_label_type: 'fiscal_year'

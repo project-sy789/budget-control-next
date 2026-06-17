@@ -3,7 +3,7 @@ window.__MOCK_ENABLED = true;
 
 window.__MOCK_DATA = {
   profiles: [
-    { id: 'demo-1', email: 'admin@sapyai.com', display_name: 'ผู้ดูแลระบบ', role: 'admin', approved: true, department: 'IT', position: 'Admin', created_at: '2025-01-01' }
+    { id: 'demo-1', email: 'admin@demo.school', display_name: 'ผู้ดูแลระบบ', role: 'admin', approved: true, department: 'IT', position: 'Admin', created_at: '2025-01-01' }
   ],
   fiscal_years: [
     { id: 'fy-1', name: '2568', start_date: '2024-10-01', end_date: '2025-09-30', is_active: true },
@@ -38,8 +38,8 @@ window.__MOCK_DATA = {
   ],
   system_settings: [
     { setting_key: 'site_name', setting_value: 'ระบบควบคุมงบประมาณ' },
-    { setting_key: 'organization_name', setting_value: 'โรงเรียนซับใหญ่วิทยาคม' },
-    { setting_key: 'site_title', setting_value: 'ระบบควบคุมงบประมาณ - โรงเรียนซับใหญ่วิทยาคม' },
+    { setting_key: 'organization_name', setting_value: 'โรงเรียนสาธิตสามัคคีวิทยา' },
+    { setting_key: 'site_title', setting_value: 'ระบบควบคุมงบประมาณ - โรงเรียนสาธิตสามัคคีวิทยา' },
     { setting_key: 'year_label_type', setting_value: 'fiscal_year' },
   ]
 };

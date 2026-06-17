@@ -128,7 +128,7 @@ export default function SystemSettingsPage() {
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">ชื่อย่อ (Slug)</label>
             <input value={settings.org_slug || ''} onChange={e => setSettings({ ...settings, org_slug: e.target.value })}
-              placeholder="sapyai"
+              placeholder="demo-school"
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-200 font-mono outline-none" />
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function SystemSettingsPage() {
               <MapPin className="w-3 h-3 inline mr-1" /> ที่อยู่
             </label>
             <input value={settings.contact_address || ''} onChange={e => setSettings({ ...settings, contact_address: e.target.value })}
-              placeholder="123 หมู่ 4 ต.ซับใหญ่ อ.ซับใหญ่"
+              placeholder="123 หมู่ 4 ต.สาธิต อ.เมือง"
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-200 outline-none" />
           </div>
         </div>

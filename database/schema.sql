@@ -22,7 +22,7 @@ CREATE TABLE public.organizations (
 
 -- Seed a default demo organization
 INSERT INTO public.organizations (id, name, slug, type, settings, subscription_tier, max_users)
-VALUES ('00000000-0000-0000-0000-000000000001', 'โรงเรียนซับใหญ่วิทยาคม', 'sapyai', 'school',
+VALUES ('00000000-0000-0000-0000-000000000001', 'โรงเรียนสาธิตสามัคคีวิทยา', 'demo-school', 'school',
         '{"year_label_type": "fiscal_year", "currency": "THB"}', 'free', 999999)
 ON CONFLICT DO NOTHING;
 
@@ -330,8 +330,8 @@ BEGIN
     INSERT INTO public.system_settings (organization_id, setting_key, setting_value)
     VALUES
         (demo_org_id, 'site_name', 'ระบบควบคุมงบประมาณ'),
-        (demo_org_id, 'organization_name', 'โรงเรียนซับใหญ่วิทยาคม'),
-        (demo_org_id, 'site_title', 'ระบบควบคุมงบประมาณ - โรงเรียนซับใหญ่วิทยาคม'),
+        (demo_org_id, 'organization_name', 'โรงเรียนสาธิตสามัคคีวิทยา'),
+        (demo_org_id, 'site_title', 'ระบบควบคุมงบประมาณ - โรงเรียนสาธิตสามัคคีวิทยา'),
         (demo_org_id, 'year_label_type', 'fiscal_year'),
         (demo_org_id, 'enable_pwa', 'true')
     ON CONFLICT DO NOTHING;

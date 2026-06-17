@@ -71,7 +71,7 @@ export default function LoginPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input name="email" type="email" required className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="admin@sapyai.com" />
+                <input name="email" type="email" required className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="admin@demo.school" />
               </div>
             </div>
             <div>
