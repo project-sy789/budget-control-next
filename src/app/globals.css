@@ -8,8 +8,8 @@
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #0f0f1a;
+  --foreground: #e5e5e5;
 }
 
 @theme inline {
@@ -24,17 +24,3 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-
-/* Dark mode overrides for common elements */
-.dark .bg-white { background-color: #1a1a2e; }
-.dark .bg-gray-50 { background-color: #111122; }
-.dark .bg-gray-100 { background-color: #1e1e32; }
-.dark .text-gray-800 { color: #e0e0e0; }
-.dark .text-gray-700 { color: #c0c0c0; }
-.dark .text-gray-600 { color: #a0a0a0; }
-.dark .text-gray-500 { color: #888888; }
-.dark .text-gray-400 { color: #666666; }
-.dark .border-gray-100 { border-color: #2a2a3e; }
-.dark .border-gray-200 { border-color: #333355; }
-.dark .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0,0,0,0.3); }
-.dark .shadow { box-shadow: 0 1px 3px 0 rgba(0,0,0,0.4); }

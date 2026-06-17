@@ -192,24 +192,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-gray-50">
+      <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-[#0f0f1a]">
         {/* Top bar */}
-        <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 hover:bg-gray-100 rounded-lg">
-            <Menu className="w-5 h-5 text-gray-600" />
+        <div className="sticky top-0 z-30 bg-white dark:bg-[#1a1a2e] border-b border-gray-200 dark:border-gray-800 px-4 py-3 flex items-center justify-between">
+          <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+            <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </button>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-2">
             <button onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-500 rounded-lg text-xs hover:bg-gray-200 transition">
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-lg text-xs hover:bg-gray-200 dark:hover:bg-gray-700 transition">
               <Search className="w-3.5 h-3.5" /> ค้นหา
-              <kbd className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded">Ctrl+K</kbd>
+              <kbd className="text-[10px] bg-gray-200 dark:bg-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded">Ctrl+K</kbd>
             </button>
             <button onClick={() => setDarkMode(!darkMode)}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition">
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
               {darkMode ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-gray-500" />}
             </button>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-full text-xs font-medium">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
               ออนไลน์
             </span>
