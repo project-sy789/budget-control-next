@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getAllOrganizations } from '@/lib/auth/admin-actions'
 import { Building2, Users, FolderOpen, Calculator, Search, TrendingUp, Shield, Ban, Crown, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
@@ -14,22 +15,47 @@ export default function AdminPage() {
   useEffect(() => { loadData() }, [])
 
   async function loadData() {
-    const { data: orgData } = await supabase.from('organizations').select('*').order('created_at', { ascending: false })
+    let loadedOrgs: any[] = []
+    
+    try {
+      // Use server action (service_role) to get ALL organizations
+      loadedOrgs = await getAllOrganizations()
+      
+      if (loadedOrgs && loadedOrgs.length > 0) {
+        setOrgs(loadedOrgs)
+      } else {
+        // Fallback: try client-side (RLS-limited)
+        const { data: orgData } = await supabase.from('organizations').select('*').order('created_at', { ascending: false })
+        loadedOrgs = orgData || []
+        setOrgs(loadedOrgs)
+      }
+    } catch {
+      // Fallback
+      const { data: orgData } = await supabase.from('organizations').select('*').order('created_at', { ascending: false })
+      loadedOrgs = orgData || []
+      setOrgs(loadedOrgs)
+    }
 
-    const allOrgs = orgData?.length ? orgData : [
-      { id: '00000000-0000-0000-0000-000000000001', name: 'โรงเรียนสาธิตสามัคคีวิทยา', slug: 'demo-school', type: 'school', subscription_tier: 'enterprise', subscription_status: 'active', max_users: 50, created_at: '2025-01-01' },
-      { id: '00000000-0000-0000-0000-000000000002', name: 'โรงเรียนอนุบาลเมืองใหม่', slug: 'anuban-muangmai', type: 'school', subscription_tier: 'pro', subscription_status: 'trial', max_users: 20, created_at: '2025-06-01' },
-      { id: '00000000-0000-0000-0000-000000000003', name: 'โรงเรียนวัดป่าตอง', slug: 'wat-patong', type: 'school', subscription_tier: 'free', subscription_status: 'active', max_users: 5, created_at: '2025-08-15' },
-      { id: '00000000-0000-0000-0000-000000000004', name: 'สำนักงานเขตพื้นที่ ป.3', slug: 'esa-p3', type: 'office', subscription_tier: 'enterprise', subscription_status: 'active', max_users: 100, created_at: '2025-03-01' },
-      { id: '00000000-0000-0000-0000-000000000005', name: 'โรงเรียนนานาชาติเทสต์', slug: 'ist-test', type: 'school', subscription_tier: 'free', subscription_status: 'expired', max_users: 5, created_at: '2025-09-01' },
-    ]
+    // Fetch user/project/transaction counts via service_role
+    try {
+      const res = await fetch('/api/admin-stats')
+      if (res.ok) {
+        const data = await res.json()
+        setStats({
+          totalOrgs: loadedOrgs.length,
+          totalUsers: data.totalUsers || 0,
+          totalProjects: data.totalProjects || 0,
+          totalTransactions: data.totalTransactions || 0,
+        })
+        return
+      }
+    } catch {}
 
-    setOrgs(allOrgs)
     setStats({
-      totalOrgs: allOrgs.length,
-      totalUsers: 48,
-      totalProjects: 156,
-      totalTransactions: 2340,
+      totalOrgs: loadedOrgs.length,
+      totalUsers: 0,
+      totalProjects: 0,
+      totalTransactions: 0,
     })
   }
 

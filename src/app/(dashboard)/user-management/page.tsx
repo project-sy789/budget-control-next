@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { adminResetPassword } from '@/lib/auth/admin-actions'
-import { Check, X, Trash2, UserCheck, KeyRound, Mail, Send, Copy, Users } from 'lucide-react'
+import { Check, X, Trash2, UserCheck, KeyRound, Mail, Send, Copy, Users, Clock, Link2 } from 'lucide-react'
 import { DEMO_PROFILES } from '@/lib/mock-data'
 
 export default function UserManagementPage() {
@@ -20,9 +20,10 @@ export default function UserManagementPage() {
   const [inviteLink, setInviteLink] = useState('')
   const [inviteMsg, setInviteMsg] = useState('')
   const [isDemo, setIsDemo] = useState(false)
+  const [invitations, setInvitations] = useState<any[]>([])
   const supabase = createClient()
 
-  useEffect(() => { loadUsers() }, [])
+  useEffect(() => { loadUsers(); loadInvitations() }, [])
 
   async function loadUsers() {
     try {
@@ -43,6 +44,19 @@ export default function UserManagementPage() {
       setUsers(DEMO_PROFILES)
     }
     setLoading(false)
+  }
+
+  async function loadInvitations() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const { data } = await supabase.from('invitations')
+        .select('*')
+        .order('created_at', { ascending: false })
+      setInvitations(data || [])
+    } catch {
+      // silently fail — invitations are optional
+    }
   }
 
   async function updateStatus(userId: string, role: string, approved: boolean) {
@@ -121,9 +135,19 @@ export default function UserManagementPage() {
       setInviteMsg('❌ สร้างลิงก์ไม่สำเร็จ: ' + error.message)
       return 
     }
-    
+
+    // Log activity
+    await supabase.from('activity_log').insert({
+      organization_id: orgId,
+      user_id: userId,
+      action: 'สร้างลิงก์เชิญ',
+      target_type: 'invitation',
+      metadata: { email: inviteEmail, role: inviteRole, token }
+    })
+
     setInviteLink(`${window.location.origin}/invite/${token}`)
     setInviteMsg('✅ สร้างลิงก์เชิญสำเร็จ!')
+    loadInvitations()
   }
 
   async function handleResetPassword() {

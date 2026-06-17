@@ -8,7 +8,7 @@ import Link from 'next/link'
 import {
   LayoutDashboard, FolderOpen, Calculator, BarChart3, ArrowLeftRight,
   Tags, Users, Settings, Calendar, UserCircle, LogOut, Menu, X, Building2,
-  Moon, Sun, Clock, Search, ChevronDown, PlusCircle
+  Moon, Sun, Clock, Search, ChevronDown, PlusCircle, Shield
 } from 'lucide-react'
 import CommandPalette from '@/components/CommandPalette'
 
@@ -167,6 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   { href: '/system-settings', label: 'การตั้งค่าระบบ', icon: Settings },
                   { href: '/fiscal-years', label: `จัดการ${yearLabel}`, icon: Calendar },
                   { href: '/activity-log', label: 'บันทึกกิจกรรม', icon: Clock },
+                  { href: '/admin', label: 'Super Admin', icon: Shield },
                 ].map(item => {
                   const Icon = item.icon
                   const active = pathname === item.href
