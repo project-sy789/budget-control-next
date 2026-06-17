@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { Plus, Search, Download } from 'lucide-react'
+import { Plus, Search, Download, Pencil } from 'lucide-react'
 import { DEMO_FISCAL_YEARS, DEMO_PROJECTS, DEMO_CATEGORIES, DEMO_TRANSACTIONS, DEMO_WORK_GROUPS } from '@/lib/mock-data'
 
 export default function BudgetControlPage() {
@@ -15,13 +15,17 @@ export default function BudgetControlPage() {
   const [yearLabel, setYearLabel] = useState('ปีงบประมาณ')
   const [filters, setFilters] = useState({ fiscal_year_id: 'all', project_id: 'all', type: 'all', work_group: 'all', search: '' })
   const [showModal, setShowModal] = useState(false)
+  const [editingTx, setEditingTx] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [isDemo, setIsDemo] = useState(false)
   const supabase = createClient()
 
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
     // Year label
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) setIsDemo(true)
     const { data: settings } = await supabase.from('system_settings').select('*').eq('setting_key', 'year_label_type')
     if (settings?.[0]) {
       const labelMap: Record<string, string> = { fiscal_year: 'ปีงบประมาณ', academic_year: 'ปีการศึกษา', budget_year: 'ปีบัญชี' }
@@ -91,7 +95,7 @@ export default function BudgetControlPage() {
             className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">
             <Download className="w-4 h-4" /> ส่งออก
           </a>
-          <button onClick={() => setShowModal(true)}
+          <button onClick={() => { if (isDemo) return; setEditingTx(null); setShowModal(true) }}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition">
             <Plus className="w-4 h-4" /> เพิ่มรายการ
           </button>
@@ -168,7 +172,7 @@ export default function BudgetControlPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-600">รายการ</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">ประเภท</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">จำนวนเงิน</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">ลบ</th>
+                <th className="text-center px-4 py-3 font-medium text-gray-600">จัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -199,12 +203,19 @@ export default function BudgetControlPage() {
                     ฿{Math.abs(Number(tx.amount)).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <button onClick={async () => {
-                      if (confirm('ลบรายการนี้?')) {
-                        await supabase.from('transactions').delete().eq('id', tx.id)
-                        loadAll()
-                      }
-                    }} className="p-1 hover:bg-red-50 rounded text-red-400 hover:text-red-600 text-xs">✕</button>
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={() => { if (isDemo) return; setEditingTx(tx); setShowModal(true) }}
+                        className="p-1 hover:bg-purple-50 rounded text-purple-400 hover:text-purple-600 text-xs" title="แก้ไข">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={async () => {
+                        if (isDemo) return
+                        if (confirm('ลบรายการนี้?')) {
+                          await supabase.from('transactions').delete().eq('id', tx.id)
+                          loadAll()
+                        }
+                      }} className="p-1 hover:bg-red-50 rounded text-red-400 hover:text-red-600 text-xs" title="ลบ">✕</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -224,22 +235,25 @@ export default function BudgetControlPage() {
           categories={categories}
           fiscalYears={fiscalYears}
           yearLabel={yearLabel}
-          onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); loadAll() }}
+          transaction={editingTx}
+          isDemo={isDemo}
+          onClose={() => { setShowModal(false); setEditingTx(null) }}
+          onSaved={() => { setShowModal(false); setEditingTx(null); loadAll() }}
         />
       )}
     </div>
   )
 }
 
-function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, onClose, onSaved }: any) {
-  const [projectId, setProjectId] = useState('')
-  const [categoryTypeId, setCategoryTypeId] = useState('')
-  const [amount, setAmount] = useState('')
-  const [type, setType] = useState('expense')
-  const [description, setDescription] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [refNumber, setRefNumber] = useState('')
+function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, transaction, isDemo, onClose, onSaved }: any) {
+  const isEdit = !!transaction
+  const [projectId, setProjectId] = useState(transaction?.project_id || '')
+  const [categoryTypeId, setCategoryTypeId] = useState(transaction?.category_type_id || '')
+  const [amount, setAmount] = useState(transaction ? String(Math.abs(Number(transaction.amount))) : '')
+  const [type, setType] = useState(transaction?.transaction_type === 'income' ? 'income' : 'expense')
+  const [description, setDescription] = useState(transaction?.description || '')
+  const [date, setDate] = useState(transaction?.transaction_date || new Date().toISOString().split('T')[0])
+  const [refNumber, setRefNumber] = useState(transaction?.reference_number || '')
   const [filterFyId, setFilterFyId] = useState('all')
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
@@ -256,9 +270,10 @@ function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, onC
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isDemo) { onSaved(); return }
     if (!projectId) { alert('กรุณาเลือกโครงการ'); return }
     setSaving(true)
-    const { error } = await supabase.from('transactions').insert({
+    const data = {
       project_id: projectId,
       category_type_id: categoryTypeId || null,
       amount: type === 'income' ? Math.abs(Number(amount)) : -Math.abs(Number(amount)),
@@ -266,7 +281,15 @@ function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, onC
       description,
       transaction_date: date,
       reference_number: refNumber
-    })
+    }
+    let error
+    if (isEdit) {
+      const res = await supabase.from('transactions').update(data).eq('id', transaction.id)
+      error = res.error
+    } else {
+      const res = await supabase.from('transactions').insert(data)
+      error = res.error
+    }
     if (error) alert('เกิดข้อผิดพลาด: ' + error.message)
     setSaving(false)
     if (!error) onSaved()
@@ -275,7 +298,7 @@ function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, onC
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white rounded-xl w-full max-w-md p-6">
-        <h2 className="text-lg font-bold mb-4">เพิ่มรายการ</h2>
+        <h2 className="text-lg font-bold mb-4">{isEdit ? 'แก้ไขรายการ' : 'เพิ่มรายการ'}</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* Filter by fiscal year first */}
           <div>
