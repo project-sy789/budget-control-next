@@ -21,9 +21,9 @@ CREATE TABLE public.organizations (
 );
 
 -- Seed a default demo organization
-INSERT INTO public.organizations (id, name, slug, type, settings, subscription_tier)
+INSERT INTO public.organizations (id, name, slug, type, settings, subscription_tier, max_users)
 VALUES ('00000000-0000-0000-0000-000000000001', 'โรงเรียนซับใหญ่วิทยาคม', 'sapyai', 'school',
-        '{"year_label_type": "fiscal_year", "currency": "THB"}', 'enterprise')
+        '{"year_label_type": "fiscal_year", "currency": "THB"}', 'free', 999999)
 ON CONFLICT DO NOTHING;
 
 -- ═════════════════════════════════════

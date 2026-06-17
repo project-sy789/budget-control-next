@@ -17,39 +17,6 @@ const FEATURES = [
   { icon: Bell, title: 'แจ้งเตือนงบประมาณ', desc: 'เตือนเมื่อโครงการใช้เกิน 80% — ไม่พลาดทุกการตัดสินใจ', color: 'bg-red-100 text-red-600' },
 ]
 
-const PRICING = [
-  {
-    name: 'ฟรี',
-    price: '฿0',
-    period: 'ตลอดชีพ',
-    desc: 'สำหรับโรงเรียนขนาดเล็ก',
-    features: ['1 โรงเรียน', 'สูงสุด 5 ผู้ใช้', '20 โครงการ', '100 รายการ/เดือน', 'Export CSV', 'Community support'],
-    cta: 'เริ่มใช้งานฟรี',
-    href: '/register',
-    featured: false,
-  },
-  {
-    name: 'Pro',
-    price: '฿299',
-    period: '/เดือน',
-    desc: 'สำหรับโรงเรียนทั่วไป',
-    features: ['1 โรงเรียน', 'ไม่จำกัดผู้ใช้', 'ไม่จำกัดโครงการ', 'ไม่จำกัดรายการ', 'Export CSV + Excel', 'Priority support', 'Custom กลุ่มงาน/หมวดหมู่'],
-    cta: 'ทดลองใช้ฟรี 30 วัน',
-    href: '/register?plan=pro',
-    featured: true,
-  },
-  {
-    name: 'Enterprise',
-    price: '฿999',
-    period: '/เดือน',
-    desc: 'สำหรับเขตพื้นที่การศึกษา',
-    features: ['ไม่จำกัดโรงเรียน', 'ไม่จำกัดผู้ใช้', 'Super Admin cockpit', 'API access', 'Custom domain', 'Dedicated support', 'SSO / OAuth', 'SLA 99.9%'],
-    cta: 'ติดต่อเรา',
-    href: 'mailto:sales@budget-control.app',
-    featured: false,
-  },
-]
-
 const STEPS = [
   { step: 1, title: 'สมัครสมาชิก', desc: 'สร้างบัญชีและตั้งค่าโรงเรียนใน 2 นาที' },
   { step: 2, title: 'ตั้งค่าปีงบประมาณ', desc: 'เลือกรูปแบบปีและเพิ่มหมวดหมู่เริ่มต้น' },
@@ -77,12 +44,11 @@ export default function LandingPage() {
 
             {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-sm text-gray-600 hover:text-purple-600 transition">ฟีเจอร์</a>
-              <a href="#pricing" className="text-sm text-gray-600 hover:text-purple-600 transition">ราคา</a>
+              <a href="#pricing" className="text-sm text-gray-600 hover:text-purple-600 transition">ทำไมฟรี?</a>
               <a href="#how" className="text-sm text-gray-600 hover:text-purple-600 transition">วิธีใช้งาน</a>
               <Link href="/login" className="text-sm text-gray-600 hover:text-purple-600 transition">เข้าสู่ระบบ</Link>
               <Link href="/register"
-                className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition shadow-sm shadow-purple-200">
+                className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition shadow-sm shadow-green-200">
                 สมัครใช้งานฟรี
               </Link>
             </div>
@@ -97,7 +63,7 @@ export default function LandingPage() {
           {mobileMenu && (
             <div className="md:hidden py-4 border-t border-gray-100 space-y-3">
               <a href="#features" className="block text-sm text-gray-600 py-2">ฟีเจอร์</a>
-              <a href="#pricing" className="block text-sm text-gray-600 py-2">ราคา</a>
+              <a href="#pricing" className="block text-sm text-gray-600 py-2">ทำไมฟรี?</a>
               <Link href="/login" className="block text-sm text-gray-600 py-2">เข้าสู่ระบบ</Link>
               <Link href="/register"
                 className="block text-center px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium">
@@ -132,7 +98,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/register"
-                className="w-full sm:w-auto px-8 py-4 bg-purple-600 text-white rounded-2xl text-lg font-semibold hover:bg-purple-700 transition shadow-lg shadow-purple-200 flex items-center justify-center gap-2">
+                className="w-full sm:w-auto px-8 py-4 bg-green-600 text-white rounded-2xl text-lg font-semibold hover:bg-green-700 transition shadow-lg shadow-green-200 flex items-center justify-center gap-2">
                 เริ่มใช้งานฟรี <ArrowRight className="w-5 h-5" />
               </Link>
               <Link href="/dashboard"
@@ -140,7 +106,7 @@ export default function LandingPage() {
                 ลอง Demo <Zap className="w-5 h-5" />
               </Link>
             </div>
-            <p className="mt-4 text-xs text-gray-400">ไม่ต้องใช้บัตรเครดิต • ฟรีตลอดชีพสำหรับแผนเริ่มต้น</p>
+            <p className="mt-4 text-xs text-gray-400">ไม่ต้องใช้บัตรเครดิต • ฟรี 100% ตลอดชีพ</p>
           </div>
         </div>
       </section>
@@ -191,62 +157,30 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Pricing ── */}
+      {/* ── 100% Free Badge ── */}
       <section id="pricing" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900">ราคาที่เหมาะกับทุกโรงเรียน</h2>
-            <p className="mt-4 text-gray-600">เริ่มต้นฟรี — อัปเกรดเมื่อพร้อม</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {PRICING.map((plan, i) => (
-              <div key={i} className={`relative bg-white rounded-2xl p-8 shadow-sm border-2 transition ${
-                plan.featured ? 'border-purple-500 shadow-xl shadow-purple-100 scale-105' : 'border-gray-100 hover:border-gray-200'
-              }`}>
-                {plan.featured && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-purple-600 text-white text-xs font-semibold rounded-full">
-                    ยอดนิยม
-                  </div>
-                )}
-                <h3 className="text-lg font-semibold text-gray-800">{plan.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">{plan.desc}</p>
-                <div className="mt-4 mb-6">
-                  <span className="text-4xl font-extrabold text-gray-900">{plan.price}</span>
-                  <span className="text-gray-500 ml-1">{plan.period}</span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-start gap-2 text-sm text-gray-600">
-                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href={plan.href}
-                  className={`block w-full text-center py-3 rounded-xl text-sm font-semibold transition ${
-                    plan.featured
-                      ? 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm shadow-purple-200'
-                      : 'border-2 border-gray-200 text-gray-700 hover:border-purple-300 hover:text-purple-600'
-                  }`}>
-                  {plan.cta}
-                </Link>
-              </div>
-            ))}
+        <div className="max-w-3xl mx-auto px-4 text-center">
+          <div className="bg-white rounded-3xl p-10 shadow-lg border-2 border-green-300">
+            <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">ฟรี 100% — ตลอดชีพ</h2>
+            <p className="text-lg text-gray-600 mb-2">ไม่มีค่าใช้จ่าย ไม่มีข้อจำกัด ไม่มีลูกเล่น</p>
+            <p className="text-sm text-gray-400">เพราะเราเชื่อว่าโรงเรียนทุกแห่งควรเข้าถึงระบบบริหารงบประมาณที่ดีได้</p>
           </div>
         </div>
       </section>
 
       {/* ── CTA Section ── */}
-      <section className="py-20 bg-gradient-to-br from-purple-600 to-blue-600 text-white">
+      <section className="py-20 bg-gradient-to-br from-green-600 to-emerald-600 text-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">พร้อมที่จะควบคุมงบประมาณโรงเรียนของคุณ?</h2>
-          <p className="text-purple-100 mb-8 text-lg">
-            โรงเรียนกว่า 100 แห่งทั่วประเทศไว้วางใจ BudgetControl
+          <p className="text-green-100 mb-8 text-lg">
+            ฟรี 100% — ไม่มีค่าใช้จ่ายแอบแฝง
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/register"
-              className="px-8 py-4 bg-white text-purple-600 rounded-2xl text-lg font-semibold hover:bg-purple-50 transition shadow-lg flex items-center gap-2">
+              className="px-8 py-4 bg-white text-green-600 rounded-2xl text-lg font-semibold hover:bg-green-50 transition shadow-lg flex items-center gap-2">
               สมัครใช้งานฟรี <ArrowRight className="w-5 h-5" />
             </Link>
             <Link href="/dashboard"
@@ -268,13 +202,13 @@ export default function LandingPage() {
                 </div>
                 <span className="font-bold text-gray-800">BudgetControl</span>
               </div>
-              <p className="text-sm text-gray-500">ระบบควบคุมงบประมาณสำหรับโรงเรียน — SaaS ฟรีสำหรับแผนเริ่มต้น</p>
+              <p className="text-sm text-gray-500">ระบบควบคุมงบประมาณสำหรับโรงเรียน — ฟรี 100% ตลอดชีพ</p>
             </div>
             <div>
               <h4 className="font-semibold text-gray-800 mb-3 text-sm">ผลิตภัณฑ์</h4>
               <div className="space-y-2 text-sm text-gray-500">
                 <p><a href="#features" className="hover:text-purple-600">ฟีเจอร์</a></p>
-                <p><a href="#pricing" className="hover:text-purple-600">ราคา</a></p>
+                <p><a href="#pricing" className="hover:text-purple-600">ทำไมฟรี?</a></p>
                 <p><Link href="/dashboard" className="hover:text-purple-600">Demo</Link></p>
               </div>
             </div>
