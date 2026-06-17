@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { adminResetPassword } from '@/lib/auth/admin-actions'
-import { Check, X, Trash2, UserCheck, KeyRound, Mail, Send, Copy, Users, Clock, Link2 } from 'lucide-react'
+import { adminResetPassword, updateUserProfile, deleteUser as deleteUserAction } from '@/lib/auth/admin-actions'
+import { Check, X, Trash2, UserCheck, KeyRound, Mail, Send, Copy, Users, Clock, Link2, Edit3, Save } from 'lucide-react'
 import { DEMO_PROFILES } from '@/lib/mock-data'
 
 export default function UserManagementPage() {
@@ -21,6 +21,13 @@ export default function UserManagementPage() {
   const [inviteMsg, setInviteMsg] = useState('')
   const [isDemo, setIsDemo] = useState(false)
   const [invitations, setInvitations] = useState<any[]>([])
+  const [actionMsg, setActionMsg] = useState('')
+
+  // Inline edit state
+  const [editingUser, setEditingUser] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editRole, setEditRole] = useState('')
+
   const supabase = createClient()
 
   useEffect(() => { loadUsers(); loadInvitations() }, [])
@@ -30,7 +37,6 @@ export default function UserManagementPage() {
       const { data: { session } } = await supabase.auth.getSession()
       const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
       
-      // Unauthenticated or no data → demo mode
       if (!session || !data?.length) {
         setIsDemo(true)
         setUsers(DEMO_PROFILES)
@@ -54,31 +60,46 @@ export default function UserManagementPage() {
         .select('*')
         .order('created_at', { ascending: false })
       setInvitations(data || [])
-    } catch {
-      // silently fail — invitations are optional
-    }
+    } catch {}
   }
 
-  async function updateStatus(userId: string, role: string, approved: boolean) {
+  async function handleUpdateRole(userId: string, role: string) {
     if (isDemo) return
-    // If approving, auto-upgrade from 'pending' to 'user' if still pending
-    const effectiveRole = approved && role === 'pending' ? 'user' : role
-    await supabase.from('profiles').update({ role: effectiveRole, approved }).eq('id', userId)
+    setActionMsg('')
+    const res = await updateUserProfile(userId, { role })
+    if (res?.error) { setActionMsg('❌ ' + res.error); return }
+    setActionMsg('✅ เปลี่ยนบทบาทแล้ว')
     loadUsers()
   }
 
-  async function approveUser(userId: string) {
+  async function handleApproveUser(userId: string) {
     if (isDemo) return
+    setActionMsg('')
     const user = users.find(u => u.id === userId)
-    const newRole = user?.role === 'pending' ? 'user' : user?.role
-    await supabase.from('profiles').update({ approved: true, role: newRole }).eq('id', userId)
+    const newRole = user?.role === 'pending' ? 'user' : (user?.role || 'user')
+    const res = await updateUserProfile(userId, { approved: true, role: newRole })
+    if (res?.error) { setActionMsg('❌ ' + res.error); return }
+    setActionMsg('✅ อนุมัติผู้ใช้แล้ว')
     loadUsers()
   }
 
-  async function deleteUser(userId: string) {
+  async function handleDeleteUser(userId: string, name: string) {
     if (isDemo) return
-    if (!confirm('ลบผู้ใช้นี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) return
-    await supabase.from('profiles').delete().eq('id', userId)
+    if (!confirm(`ลบผู้ใช้ "${name}"? การกระทำนี้ไม่สามารถย้อนกลับได้`)) return
+    setActionMsg('')
+    const res = await deleteUserAction(userId)
+    if (res?.error) { setActionMsg('❌ ' + res.error); return }
+    setActionMsg('✅ ลบผู้ใช้แล้ว')
+    loadUsers()
+  }
+
+  async function handleSaveEdit(userId: string) {
+    if (isDemo) return
+    setActionMsg('')
+    const res = await updateUserProfile(userId, { display_name: editName, role: editRole })
+    if (res?.error) { setActionMsg('❌ ' + res.error); return }
+    setActionMsg('✅ อัปเดตผู้ใช้แล้ว')
+    setEditingUser(null)
     loadUsers()
   }
 
@@ -87,13 +108,11 @@ export default function UserManagementPage() {
     setInviteMsg('')
     setInviteLink('')
 
-    // Validate email
     if (!inviteEmail.includes('@')) {
       setInviteMsg('❌ กรุณากรอกอีเมลที่ถูกต้อง')
       return
     }
 
-    // Demo mode: generate a fake invite link
     if (isDemo) {
       const token = crypto.randomUUID()
       setInviteLink(`${window.location.origin}/invite/${token}`)
@@ -101,7 +120,6 @@ export default function UserManagementPage() {
       return
     }
 
-    // Get user session (local, no network call)
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) {
       setInviteMsg('❌ ไม่พบ session — กรุณาเข้าสู่ระบบใหม่')
@@ -110,7 +128,6 @@ export default function UserManagementPage() {
     
     const userId = session.user.id
 
-    // Get profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('active_organization_id')
@@ -136,7 +153,6 @@ export default function UserManagementPage() {
       return 
     }
 
-    // Log activity
     await supabase.from('activity_log').insert({
       organization_id: orgId,
       user_id: userId,
@@ -178,6 +194,12 @@ export default function UserManagementPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">จัดการผู้ใช้</h1>
+
+      {actionMsg && (
+        <div className={`mb-4 px-4 py-2.5 rounded-xl text-sm ${actionMsg.startsWith('✅') ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-600'}`}>
+          {actionMsg}
+        </div>
+      )}
 
       {/* ── Invite Card ── */}
       {!showInvite ? (
@@ -250,6 +272,48 @@ export default function UserManagementPage() {
         </div>
       )}
 
+      {/* ── Invitations History ── */}
+      {invitations.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center gap-2">
+            <Link2 className="w-3.5 h-3.5" /> ประวัติการเชิญ ({invitations.length})
+          </h3>
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="text-left px-3 py-2 text-gray-500">อีเมล</th>
+                  <th className="text-center px-3 py-2 text-gray-500">บทบาท</th>
+                  <th className="text-center px-3 py-2 text-gray-500">สถานะ</th>
+                  <th className="text-right px-3 py-2 text-gray-500">สร้างเมื่อ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {invitations.map((inv: any) => (
+                  <tr key={inv.id}>
+                    <td className="px-3 py-2 text-gray-600">{inv.email}</td>
+                    <td className="px-3 py-2 text-center text-gray-500">{inv.role}</td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                        inv.status === 'accepted' ? 'bg-green-100 text-green-600' :
+                        inv.status === 'expired' ? 'bg-red-100 text-red-500' :
+                        'bg-amber-100 text-amber-600'
+                      }`}>
+                        {inv.status === 'accepted' ? 'ใช้แล้ว' : inv.status === 'expired' ? 'หมดอายุ' : 'รอ'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right text-gray-400">
+                      {new Date(inv.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Users Table ── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -264,22 +328,41 @@ export default function UserManagementPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {users.map(user => (
+              {users.map(user => {
+                const isEditing = editingUser === user.id
+                return (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-800">
-                    <div>{user.display_name}</div>
-                    <div className="text-xs text-gray-400">
-                      {new Date(user.created_at).toLocaleDateString('th-TH')}
-                    </div>
+                    {isEditing ? (
+                      <input value={editName} onChange={e => setEditName(e.target.value)}
+                        className="w-full px-2 py-1 border border-purple-200 rounded text-xs" placeholder="ชื่อ" />
+                    ) : (
+                      <>
+                        <div>{user.display_name}</div>
+                        <div className="text-xs text-gray-400">
+                          {new Date(user.created_at).toLocaleDateString('th-TH')}
+                        </div>
+                      </>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{user.email}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs">
                     {[user.position, user.department].filter(Boolean).join(' / ') || '-'}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColors[user.role]}`}>
-                      {roleLabels[user.role]}
-                    </span>
+                    {isEditing ? (
+                      <select value={editRole} onChange={e => setEditRole(e.target.value)}
+                        className="text-xs border border-purple-200 rounded px-1.5 py-0.5">
+                        <option value="pending">รออนุมัติ</option>
+                        <option value="user">ผู้ใช้</option>
+                        <option value="manager">ผู้จัดการ</option>
+                        <option value="admin">ผู้ดูแล</option>
+                      </select>
+                    ) : (
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColors[user.role]}`}>
+                        {roleLabels[user.role]}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {user.approved ? (
@@ -294,45 +377,52 @@ export default function UserManagementPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1 flex-wrap">
-                      <select
-                        value={user.role}
-                        onChange={e => updateStatus(user.id, e.target.value, user.approved)}
-                        className="text-xs border border-gray-200 rounded px-1 py-0.5"
-                      >
-                        <option value="pending">รออนุมัติ</option>
-                        <option value="user">ผู้ใช้</option>
-                        <option value="manager">ผู้จัดการ</option>
-                        <option value="admin">ผู้ดูแล</option>
-                      </select>
-                      {!user.approved && (
-                        <button
-                          onClick={() => updateStatus(user.id, user.role, true)}
-                          className="p-1 hover:bg-gray-100 rounded text-green-600"
-                          title="อนุมัติ"
-                        >
-                          <UserCheck className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setResetModal({ userId: user.id, displayName: user.display_name })}
-                        className="p-1 hover:bg-gray-100 rounded text-purple-500"
-                        title="รีเซ็ตรหัสผ่าน"
-                      >
-                        <KeyRound className="w-4 h-4" />
-                      </button>
-                      {user.role !== 'admin' && (
-                        <button
-                          onClick={() => deleteUser(user.id)}
-                          className="p-1 hover:bg-gray-100 rounded text-red-500"
-                          title="ลบ"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      {isEditing ? (
+                        <>
+                          <button onClick={() => handleSaveEdit(user.id)}
+                            className="p-1 hover:bg-green-50 rounded text-green-600" title="บันทึก">
+                            <Save className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setEditingUser(null)}
+                            className="p-1 hover:bg-gray-100 rounded text-gray-400" title="ยกเลิก">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => { setEditingUser(user.id); setEditName(user.display_name || ''); setEditRole(user.role); setActionMsg('') }}
+                            className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600" title="แก้ไข">
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <select value={user.role} onChange={e => handleUpdateRole(user.id, e.target.value)}
+                            className="text-xs border border-gray-200 rounded px-1 py-0.5">
+                            <option value="pending">รออนุมัติ</option>
+                            <option value="user">ผู้ใช้</option>
+                            <option value="manager">ผู้จัดการ</option>
+                            <option value="admin">ผู้ดูแล</option>
+                          </select>
+                          {!user.approved && (
+                            <button onClick={() => handleApproveUser(user.id)}
+                              className="p-1 hover:bg-gray-100 rounded text-green-600" title="อนุมัติ">
+                              <UserCheck className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button onClick={() => setResetModal({ userId: user.id, displayName: user.display_name })}
+                            className="p-1 hover:bg-gray-100 rounded text-purple-500" title="รีเซ็ตรหัสผ่าน">
+                            <KeyRound className="w-4 h-4" />
+                          </button>
+                          {user.role !== 'admin' && (
+                            <button onClick={() => handleDeleteUser(user.id, user.display_name || user.email)}
+                              className="p-1 hover:bg-gray-100 rounded text-red-500" title="ลบ">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
               {users.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
