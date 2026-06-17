@@ -24,6 +24,16 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showTxModal, setShowTxModal] = useState(false)
   const [isDemo, setIsDemo] = useState(false)
+  const [catTypes, setCatTypes] = useState<any[]>([])
+
+  // Transaction form
+  const [txAmount, setTxAmount] = useState('')
+  const [txType, setTxType] = useState('expense')
+  const [txDesc, setTxDesc] = useState('')
+  const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10))
+  const [txCatId, setTxCatId] = useState('')
+  const [txSaving, setTxSaving] = useState(false)
+  const [txError, setTxError] = useState('')
   const supabase = createClient()
   const sandbox = useDemoSandbox()
 
@@ -109,6 +119,79 @@ export default function ProjectDetailPage() {
     router.push('/projects')
   }
 
+  async function openTxModal() {
+    setTxError('')
+    setTxAmount('')
+    setTxType('expense')
+    setTxDesc('')
+    setTxDate(new Date().toISOString().slice(0, 10))
+    setTxCatId('')
+    if (!isDemo) {
+      const { data } = await supabase.from('category_types').select('id, category_name').eq('is_active', true).order('category_name')
+      setCatTypes(data || [])
+      if (data?.length) setTxCatId(data[0].id)
+    } else {
+      setCatTypes([
+        { id: 'cat-1', category_name: 'เงินกิจกรรมพัฒนาผู้เรียน' },
+        { id: 'cat-2', category_name: 'เงินค่าอุปกรณ์การเรียน' },
+        { id: 'cat-3', category_name: 'เงินรายได้สถานศึกษา' },
+        { id: 'cat-4', category_name: 'เงินอาหารกลางวัน' },
+      ])
+      setTxCatId('cat-1')
+    }
+    setShowTxModal(true)
+  }
+
+  async function handleAddTransaction() {
+    if (!txAmount || Number(txAmount) <= 0) { setTxError('กรุณากรอกจำนวนเงิน'); return }
+    setTxSaving(true); setTxError('')
+
+    if (isDemo) {
+      sandbox.addTransaction({
+        project_id: projectId,
+        amount: Number(txAmount),
+        transaction_type: txType,
+        description: txDesc,
+        transaction_date: txDate,
+        category_type_id: txCatId,
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        category_types: { category_name: catTypes.find(c => c.id === txCatId)?.category_name || '-' }
+      })
+      setShowTxModal(false)
+      loadAll()
+      setTxSaving(false)
+      return
+    }
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const userId = session?.user?.id
+    const orgId = project?.organization_id
+
+    const { error } = await supabase.from('transactions').insert({
+      project_id: projectId,
+      organization_id: orgId,
+      amount: Number(txAmount),
+      transaction_type: txType,
+      description: txDesc,
+      transaction_date: txDate,
+      category_type_id: txCatId || null,
+      created_by: userId || null,
+    })
+
+    if (error) { setTxError('❌ ' + error.message); setTxSaving(false); return }
+
+    // Update used_budget on project
+    if (txType === 'expense' || txType === 'transfer_out') {
+      const newUsed = Number(project.used_budget || 0) + Number(txAmount)
+      await supabase.from('projects').update({ used_budget: newUsed }).eq('id', projectId)
+    }
+
+    setShowTxModal(false)
+    loadAll()
+    setTxSaving(false)
+  }
+
   const used = stats.expense - stats.income
   const budget = Number(project?.budget || 0)
   const remaining = budget - used
@@ -182,7 +265,7 @@ export default function ProjectDetailPage() {
             </button>
           )}
           {!isDemo && (
-            <button onClick={() => setShowTxModal(true)}
+            <button onClick={openTxModal}
               className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition">
               <Plus className="w-4 h-4" /> เพิ่มรายการ
             </button>
@@ -272,7 +355,7 @@ export default function ProjectDetailPage() {
             <Calculator className="w-12 h-12 mx-auto mb-3 text-gray-300" />
             <p className="text-gray-500 font-medium">ยังไม่มีรายการ</p>
             {!isDemo && (
-              <button onClick={() => setShowTxModal(true)}
+              <button onClick={openTxModal}
                 className="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition">
                 <Plus className="w-4 h-4 inline mr-1" /> เพิ่มรายการแรก
               </button>

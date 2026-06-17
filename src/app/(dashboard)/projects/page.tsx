@@ -418,9 +418,10 @@ export default function ProjectsPage() {
                       <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-lg border border-gray-100 py-1 w-40"
                         onClick={() => setMenuOpen(null)}>
                         {isLocked ? (
-                          <div className="px-3 py-2 text-xs text-amber-600 flex items-center gap-2">
-                            <Lock className="w-3 h-3" /> แก้ไขไม่ได้ (มีธุรกรรม)
-                          </div>
+                          <button onClick={() => { setEditingProject(project); setShowModal(true) }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 flex items-center gap-2 text-amber-700">
+                            <Edit className="w-3.5 h-3.5" /> แก้ไข (ยกเว้นงบ)
+                          </button>
                         ) : (
                           <button onClick={() => { setEditingProject(project); setShowModal(true) }}
                             className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
@@ -650,7 +651,17 @@ function ProjectModal({
     if (!fiscalYearId) { setError(`กรุณาเลือก${yearLabel}`); return }
 
     if (isLocked) {
-      setError('โครงการนี้มีธุรกรรมแล้ว — ไม่สามารถแก้ไขชื่อ/งบประมาณ/วันที่ได้ (เปลี่ยนได้เฉพาะสถานะ)')
+      // Allow editing everything except budget
+      const updateData: any = {
+        name: name.trim(), work_group: workGroup,
+        responsible_person: responsiblePerson.trim(),
+        description: description.trim() || null,
+        start_date: startDate, end_date: endDate, status
+      }
+      setSaving(true)
+      await supabase.from('projects').update(updateData).eq('id', project.id)
+      setSaving(false)
+      onSaved()
       return
     }
 
@@ -704,7 +715,7 @@ function ProjectModal({
         {isLocked && (
           <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center gap-2 text-sm text-amber-700">
             <Lock className="w-4 h-4 flex-shrink-0" />
-            โครงการนี้มี {project.txCount} รายการธุรกรรม — แก้ไขได้เฉพาะสถานะเท่านั้น
+            โครงการนี้มี {project.txCount} รายการธุรกรรม — แก้ไขได้ทุกอย่างยกเว้นงบประมาณ
           </div>
         )}
 
@@ -720,8 +731,7 @@ function ProjectModal({
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">{yearLabel} <span className="text-red-500">*</span></label>
                 <select value={fiscalYearId} onChange={e => setFiscalYearId(e.target.value)} required
-                  disabled={isLocked}
-                  className={`w-full px-3 py-2.5 border rounded-xl text-sm outline-none ${isLocked ? 'bg-gray-100 text-gray-500 border-gray-200' : 'border-gray-200 focus:ring-2 focus:ring-purple-200 focus:border-purple-400'}`}>
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400">
                   <option value="">เลือก{yearLabel}...</option>
                   {fiscalYears.map(fy => (
                     <option key={fy.id} value={fy.id}>{fy.name} {fy.is_active ? '(ปัจจุบัน)' : ''}</option>
@@ -731,8 +741,8 @@ function ProjectModal({
 
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">ชื่อโครงการ <span className="text-red-500">*</span></label>
-                <input value={name} onChange={e => setName(e.target.value)} required disabled={isLocked}
-                  className={`w-full px-3 py-2.5 border rounded-xl text-sm outline-none ${isLocked ? 'bg-gray-100 text-gray-500 border-gray-200' : 'border-gray-200 focus:ring-2 focus:ring-purple-200 focus:border-purple-400'}`} />
+                <input value={name} onChange={e => setName(e.target.value)} required
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400" />
               </div>
 
               <div>
@@ -745,8 +755,8 @@ function ProjectModal({
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">กลุ่มงาน</label>
                 <div className="flex flex-wrap gap-2">
                   {workGroups.map((g: any) => (
-                      <button key={g.id} type="button" onClick={() => setWorkGroup(g.name)} disabled={isLocked}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${isLocked && workGroup !== g.name ? 'opacity-40 cursor-not-allowed' : ''} ${workGroup === g.name ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                      <button key={g.id} type="button" onClick={() => setWorkGroup(g.name)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${workGroup === g.name ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                         {g.name}
                       </button>
                     ))}
@@ -756,13 +766,13 @@ function ProjectModal({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">เริ่ม</label>
-                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required disabled={isLocked}
-                    className={`w-full px-3 py-2.5 border rounded-xl text-sm outline-none ${isLocked ? 'bg-gray-100 text-gray-500 border-gray-200' : 'border-gray-200 focus:ring-2 focus:ring-purple-200 focus:border-purple-400'}`} />
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">สิ้นสุด</label>
-                  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required disabled={isLocked}
-                    className={`w-full px-3 py-2.5 border rounded-xl text-sm outline-none ${isLocked ? 'bg-gray-100 text-gray-500 border-gray-200' : 'border-gray-200 focus:ring-2 focus:ring-purple-200 focus:border-purple-400'}`} />
+                  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400" />
                 </div>
               </div>
             </div>
@@ -770,14 +780,14 @@ function ProjectModal({
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">ผู้รับผิดชอบ <span className="text-red-500">*</span></label>
-                <input value={responsiblePerson} onChange={e => setResponsiblePerson(e.target.value)} required disabled={isLocked}
-                  className={`w-full px-3 py-2.5 border rounded-xl text-sm outline-none ${isLocked ? 'bg-gray-100 text-gray-500 border-gray-200' : 'border-gray-200 focus:ring-2 focus:ring-purple-200 focus:border-purple-400'}`} />
+                <input value={responsiblePerson} onChange={e => setResponsiblePerson(e.target.value)} required
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400" />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">คำอธิบาย</label>
-                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} disabled={isLocked}
-                  className={`w-full px-3 py-2.5 border rounded-xl text-sm outline-none resize-none ${isLocked ? 'bg-gray-100 text-gray-500 border-gray-200' : 'border-gray-200 focus:ring-2 focus:ring-purple-200 focus:border-purple-400'}`} />
+                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none resize-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400" />
               </div>
 
               {project && (
