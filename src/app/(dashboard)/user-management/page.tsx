@@ -142,6 +142,20 @@ export default function UserManagementPage() {
     }
 
     const orgId = profile.active_organization_id
+
+    // Check for existing pending invitation for same email
+    const { data: existing } = await supabase.from('invitations')
+      .select('id, status')
+      .eq('organization_id', orgId)
+      .eq('email', inviteEmail)
+      .eq('status', 'pending')
+      .maybeSingle()
+
+    if (existing) {
+      setInviteMsg('❌ มีคำเชิญสำหรับอีเมลนี้อยู่แล้ว — สถานะ: รอดำเนินการ')
+      return
+    }
+
     const token = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     
