@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useDemoSandbox } from '@/lib/demo-sandbox'
+import { DEMO_PROJECTS, DEMO_TRANSACTIONS } from '@/lib/mock-data'
 import {
   ArrowLeft, Calculator, TrendingUp, TrendingDown, DollarSign,
   Calendar, User, FileText, Edit, Lock, CheckCircle, PauseCircle,
@@ -21,13 +23,41 @@ export default function ProjectDetailPage() {
   const [stats, setStats] = useState({ income: 0, expense: 0, count: 0 })
   const [loading, setLoading] = useState(true)
   const [showTxModal, setShowTxModal] = useState(false)
+  const [isDemo, setIsDemo] = useState(false)
   const supabase = createClient()
+  const sandbox = useDemoSandbox()
 
   useEffect(() => { if (projectId) loadAll() }, [projectId])
 
   async function loadAll() {
+    // Check if demo mode
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setIsDemo(true)
+      // Try sandbox first, then fallback to static DEMO data
+      const allProjects = sandbox.projects?.length ? sandbox.projects : DEMO_PROJECTS
+      const proj = allProjects.find((p: any) => p.id === projectId)
+      if (!proj) { setLoading(false); return }
+      setProject(proj)
+      // Find fiscal year
+      const fy = { name: proj.fiscal_years?.name || '2568' }
+      setFiscalYear(fy)
+      // Get transactions from sandbox or DEMO
+      const allTx = sandbox.transactions?.length ? sandbox.transactions : DEMO_TRANSACTIONS
+      const tx = allTx.filter((t: any) => t.project_id === projectId)
+      setTransactions(tx || [])
+      let income = 0, expense = 0
+      tx?.forEach((t: any) => {
+        if (t.transaction_type === 'income' || t.transaction_type === 'transfer_in') income += Math.abs(Number(t.amount))
+        else expense += Math.abs(Number(t.amount))
+      })
+      setStats({ income, expense, count: tx?.length || 0 })
+      setLoading(false)
+      return
+    }
+
     try {
-      // Load project
+      // Load project from Supabase
       const { data: proj } = await supabase.from('projects')
         .select('*').eq('id', projectId).single()
       if (!proj) { setLoading(false); return }
@@ -63,11 +93,13 @@ export default function ProjectDetailPage() {
   }
 
   async function handleStatusChange(newStatus: string) {
+    if (isDemo) { setProject((p: any) => ({ ...p, status: newStatus })); return }
     await supabase.from('projects').update({ status: newStatus }).eq('id', projectId)
     loadAll()
   }
 
   async function handleDelete() {
+    if (isDemo) { router.push('/projects'); return }
     if (stats.count > 0) {
       alert('ไม่สามารถลบโครงการที่มีธุรกรรมได้ — เปลี่ยนสถานะเป็น "ระงับ" แทน')
       return
@@ -143,16 +175,18 @@ export default function ProjectDetailPage() {
             <option value="suspended">ระงับ</option>
           </select>
 
-          {!isLocked && (
+          {!isLocked && !isDemo && (
             <button onClick={() => {/* TODO: edit modal */}}
               className="flex items-center gap-1.5 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition">
               <Edit className="w-4 h-4" /> แก้ไข
             </button>
           )}
-          <button onClick={() => setShowTxModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition">
-            <Plus className="w-4 h-4" /> เพิ่มรายการ
-          </button>
+          {!isDemo && (
+            <button onClick={() => setShowTxModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition">
+              <Plus className="w-4 h-4" /> เพิ่มรายการ
+            </button>
+          )}
         </div>
       </div>
 
@@ -237,10 +271,12 @@ export default function ProjectDetailPage() {
           <div className="py-16 text-center">
             <Calculator className="w-12 h-12 mx-auto mb-3 text-gray-300" />
             <p className="text-gray-500 font-medium">ยังไม่มีรายการ</p>
-            <button onClick={() => setShowTxModal(true)}
-              className="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition">
-              <Plus className="w-4 h-4 inline mr-1" /> เพิ่มรายการแรก
-            </button>
+            {!isDemo && (
+              <button onClick={() => setShowTxModal(true)}
+                className="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition">
+                <Plus className="w-4 h-4 inline mr-1" /> เพิ่มรายการแรก
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
