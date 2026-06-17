@@ -39,6 +39,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   })
 
   const [yearLabel, setYearLabel] = useState('ปีงบประมาณ')
+  const [isDemo, setIsDemo] = useState(false)
 
   useEffect(() => {
     // Dark mode — sync class + persist
@@ -51,7 +52,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // Load real auth user + profile
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        // Demo mode — show placeholder
+        setProfile({ display_name: 'Demo', role: 'ผู้เข้าชม' })
+        setOrganization({ name: 'ระบบควบคุมงบประมาณ' })
+        setIsDemo(true)
+        return
+      }
+
+      setIsDemo(false)
 
       // Load profile from DB
       const { data: profileData } = await supabase.from('profiles')
@@ -209,9 +218,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
               {darkMode ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-gray-500" />}
             </button>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-full text-xs font-medium">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-              ออนไลน์
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+              isDemo ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isDemo ? 'bg-amber-500' : 'bg-green-500'}`} />
+              {isDemo ? 'Demo' : 'ออนไลน์'}
             </span>
           </div>
         </div>
