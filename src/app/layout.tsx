@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'ระบบควบคุมงบประมาณ - โรงเรียนซับใหญ่วิทยาคม',
+  title: 'ระบบควบคุมงบประมาณโรงเรียน',
   description: 'Budget Control System v3',
 }
 

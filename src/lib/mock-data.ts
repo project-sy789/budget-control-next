@@ -4,7 +4,7 @@
 const DEMO_ORG_ID = '00000000-0000-0000-0000-000000000001'
 
 export const DEMO_ORGANIZATIONS = [
-  { id: DEMO_ORG_ID, name: 'โรงเรียนซับใหญ่วิทยาคม', slug: 'sapyai', type: 'school', subscription_tier: 'enterprise', subscription_status: 'active', max_users: 50, settings: { year_label_type: 'fiscal_year' } },
+  { id: DEMO_ORG_ID, name: 'โรงเรียนสาธิตสามัคคีวิทยา', slug: 'demo-school', type: 'school', subscription_tier: 'enterprise', subscription_status: 'active', max_users: 50, settings: { year_label_type: 'fiscal_year' } },
 ]
 
 export const DEMO_ORGANIZATION_MEMBERS = [
@@ -64,17 +64,17 @@ export const DEMO_BUDGET_CATEGORIES = [
 
 export const DEMO_SETTINGS = [
   { setting_key: 'site_name', setting_value: 'ระบบควบคุมงบประมาณ', organization_id: DEMO_ORG_ID },
-  { setting_key: 'organization_name', setting_value: 'โรงเรียนซับใหญ่วิทยาคม', organization_id: DEMO_ORG_ID },
-  { setting_key: 'site_title', setting_value: 'ระบบควบคุมงบประมาณ - โรงเรียนซับใหญ่วิทยาคม', organization_id: DEMO_ORG_ID },
+  { setting_key: 'organization_name', setting_value: 'โรงเรียนสาธิตสามัคคีวิทยา', organization_id: DEMO_ORG_ID },
+  { setting_key: 'site_title', setting_value: 'ระบบควบคุมงบประมาณ - โรงเรียนสาธิตสามัคคีวิทยา', organization_id: DEMO_ORG_ID },
   { setting_key: 'year_label_type', setting_value: 'fiscal_year', organization_id: DEMO_ORG_ID },
   { setting_key: 'enable_pwa', setting_value: 'true', organization_id: DEMO_ORG_ID },
 ]
 
 export const DEMO_PROFILES = [
-  { id: 'demo-1', email: 'admin@sapyai.com', display_name: 'ผู้ดูแลระบบ', role: 'admin', approved: true, active_organization_id: DEMO_ORG_ID, department: 'IT', position: 'Admin', created_at: '2025-01-01' },
-  { id: 'demo-2', email: 'somsri@sapyai.com', display_name: 'นางสมศรี ใจดี', role: 'manager', approved: true, active_organization_id: DEMO_ORG_ID, department: 'วิชาการ', position: 'ครูชำนาญการ', created_at: '2025-02-01' },
-  { id: 'demo-3', email: 'somchai@sapyai.com', display_name: 'นายสมชาย รักเรียน', role: 'user', approved: true, active_organization_id: DEMO_ORG_ID, department: 'เทคโนโลยี', position: 'ครู', created_at: '2025-03-01' },
-  { id: 'demo-4', email: 'newuser@sapyai.com', display_name: 'นายสมหมาย ทดสอบ', role: 'pending', approved: false, active_organization_id: DEMO_ORG_ID, department: 'ทั่วไป', position: 'ครูผู้ช่วย', created_at: '2025-06-01' },
+  { id: 'demo-1', email: 'admin@demo.school', display_name: 'ผู้ดูแลระบบ', role: 'admin', approved: true, active_organization_id: DEMO_ORG_ID, department: 'IT', position: 'Admin', created_at: '2025-01-01' },
+  { id: 'demo-2', email: 'somsri@demo.school', display_name: 'นางสมศรี ใจดี', role: 'manager', approved: true, active_organization_id: DEMO_ORG_ID, department: 'วิชาการ', position: 'ครูชำนาญการ', created_at: '2025-02-01' },
+  { id: 'demo-3', email: 'somchai@demo.school', display_name: 'นายสมชาย รักเรียน', role: 'user', approved: true, active_organization_id: DEMO_ORG_ID, department: 'เทคโนโลยี', position: 'ครู', created_at: '2025-03-01' },
+  { id: 'demo-4', email: 'newuser@demo.school', display_name: 'นายสมหมาย ทดสอบ', role: 'pending', approved: false, active_organization_id: DEMO_ORG_ID, department: 'ทั่วไป', position: 'ครูผู้ช่วย', created_at: '2025-06-01' },
 ]
 
 export { DEMO_ORG_ID }

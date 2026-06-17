@@ -48,7 +48,7 @@ export default function LoginPage() {
             <Building2 className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">ระบบควบคุมงบประมาณ</h1>
-          <p className="text-gray-500 text-sm mt-1">โรงเรียนซับใหญ่วิทยาคม</p>
+          <p className="text-gray-500 text-sm mt-1">ระบบบริหารงบประมาณสำหรับโรงเรียน</p>
         </div>
 
         <div className="flex mb-6 bg-gray-100 rounded-lg p-1">

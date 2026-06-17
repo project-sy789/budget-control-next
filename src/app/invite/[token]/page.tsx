@@ -46,8 +46,8 @@ export default function InvitePage() {
 
     // Demo mode — simulate with mock data
     const demoInvites: Record<string, any> = {
-      'demo123': { orgName: 'โรงเรียนซับใหญ่วิทยาคม', email: 'teacher@sapyai.com', role: 'member' },
-      'demo456': { orgName: 'โรงเรียนอนุบาลเมืองใหม่', email: 'admin@anuban.ac.th', role: 'manager' },
+      'demo123': { orgName: 'โรงเรียนสาธิตสามัคคีวิทยา', email: 'teacher@demo.school', role: 'member' },
+      'demo456': { orgName: 'โรงเรียนสาธิตสามัคคีวิทยา', email: 'admin@demo.school', role: 'manager' },
     }
 
     const demo = demoInvites[token] || { orgName: 'โรงเรียน', email: 'user@school.ac.th', role: 'member' }

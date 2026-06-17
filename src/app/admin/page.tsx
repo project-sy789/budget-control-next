@@ -17,7 +17,7 @@ export default function AdminPage() {
     const { data: orgData } = await supabase.from('organizations').select('*').order('created_at', { ascending: false })
 
     const allOrgs = orgData?.length ? orgData : [
-      { id: '00000000-0000-0000-0000-000000000001', name: 'โรงเรียนซับใหญ่วิทยาคม', slug: 'sapyai', type: 'school', subscription_tier: 'enterprise', subscription_status: 'active', max_users: 50, created_at: '2025-01-01' },
+      { id: '00000000-0000-0000-0000-000000000001', name: 'โรงเรียนสาธิตสามัคคีวิทยา', slug: 'demo-school', type: 'school', subscription_tier: 'enterprise', subscription_status: 'active', max_users: 50, created_at: '2025-01-01' },
       { id: '00000000-0000-0000-0000-000000000002', name: 'โรงเรียนอนุบาลเมืองใหม่', slug: 'anuban-muangmai', type: 'school', subscription_tier: 'pro', subscription_status: 'trial', max_users: 20, created_at: '2025-06-01' },
       { id: '00000000-0000-0000-0000-000000000003', name: 'โรงเรียนวัดป่าตอง', slug: 'wat-patong', type: 'school', subscription_tier: 'free', subscription_status: 'active', max_users: 5, created_at: '2025-08-15' },
       { id: '00000000-0000-0000-0000-000000000004', name: 'สำนักงานเขตพื้นที่ ป.3', slug: 'esa-p3', type: 'office', subscription_tier: 'enterprise', subscription_status: 'active', max_users: 100, created_at: '2025-03-01' },
