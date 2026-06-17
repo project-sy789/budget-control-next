@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useDemoSandbox } from '@/lib/demo-sandbox'
 import Link from 'next/link'
 import { FolderOpen, Calculator, TrendingUp, DollarSign, Eye, EyeOff, Table2, BarChart3, AlertTriangle, Download } from 'lucide-react'
 import { DEMO_PROJECTS, DEMO_TRANSACTIONS, DEMO_WORK_GROUPS } from '@/lib/mock-data'
@@ -18,9 +19,26 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [workGroupFilter, setWorkGroupFilter] = useState('all')
   const [workGroups, setWorkGroups] = useState<any[]>([])
+  const [isDemo, setIsDemo] = useState(false)
   const supabase = createClient()
+  const sandbox = useDemoSandbox()
 
   useEffect(() => { loadData() }, [])
+
+  // Sync sandbox data in demo mode
+  useEffect(() => {
+    if (!isDemo) return
+    const txs = sandbox.transactions
+    setProjectSummary(sandbox.projects)
+    setRecentTransactions(txs.slice(0, 8))
+    setWorkGroups(sandbox.workGroups)
+    setStats({
+      projects: sandbox.projects.length,
+      transactions: txs.length,
+      totalIncome: txs.filter(t => t.transaction_type === 'income' || t.transaction_type === 'transfer_in').reduce((s, t) => s + Math.abs(Number(t.amount)), 0),
+      totalExpense: txs.filter(t => t.transaction_type === 'expense' || t.transaction_type === 'transfer_out').reduce((s, t) => s + Math.abs(Number(t.amount)), 0)
+    })
+  }, [isDemo, sandbox.projects, sandbox.transactions, sandbox.workGroups])
 
   async function loadData() {
     try {
@@ -34,15 +52,7 @@ export default function DashboardPage() {
 
       // If not authenticated or no data → demo mode
       if (!session || projectCount === null) {
-        setProjectSummary(DEMO_PROJECTS)
-        setRecentTransactions(DEMO_TRANSACTIONS.slice(0, 8))
-        setWorkGroups(DEMO_WORK_GROUPS)
-        setStats({
-          projects: DEMO_PROJECTS.length,
-          transactions: DEMO_TRANSACTIONS.length,
-          totalIncome: DEMO_TRANSACTIONS.filter(t => t.transaction_type === 'income' || t.transaction_type === 'transfer_in').reduce((s, t) => s + Math.abs(t.amount), 0),
-          totalExpense: DEMO_TRANSACTIONS.filter(t => t.transaction_type === 'expense' || t.transaction_type === 'transfer_out').reduce((s, t) => s + Math.abs(t.amount), 0)
-        })
+        setIsDemo(true)
         setLoading(false)
         return
       }

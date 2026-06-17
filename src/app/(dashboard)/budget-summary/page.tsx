@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useDemoSandbox } from '@/lib/demo-sandbox'
 import { DEMO_FISCAL_YEARS, DEMO_PROJECTS, DEMO_TRANSACTIONS, DEMO_WORK_GROUPS } from '@/lib/mock-data'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts'
 import { TrendingDown, TrendingUp, Wallet, FolderOpen, BarChart3, Download } from 'lucide-react'
