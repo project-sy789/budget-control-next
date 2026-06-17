@@ -19,6 +19,7 @@ export default function UserManagementPage() {
   const [inviteRole, setInviteRole] = useState('member')
   const [inviteLink, setInviteLink] = useState('')
   const [inviteMsg, setInviteMsg] = useState('')
+  const [isDemo, setIsDemo] = useState(false)
   const supabase = createClient()
 
   useEffect(() => { loadUsers() }, [])
@@ -30,6 +31,7 @@ export default function UserManagementPage() {
       
       // Unauthenticated or no data → demo mode
       if (!session || !data?.length) {
+        setIsDemo(true)
         setUsers(DEMO_PROFILES)
         setLoading(false)
         return
@@ -37,12 +39,14 @@ export default function UserManagementPage() {
       
       setUsers(data)
     } catch {
+      setIsDemo(true)
       setUsers(DEMO_PROFILES)
     }
     setLoading(false)
   }
 
   async function updateStatus(userId: string, role: string, approved: boolean) {
+    if (isDemo) return
     // If approving, auto-upgrade from 'pending' to 'user' if still pending
     const effectiveRole = approved && role === 'pending' ? 'user' : role
     await supabase.from('profiles').update({ role: effectiveRole, approved }).eq('id', userId)
@@ -50,6 +54,7 @@ export default function UserManagementPage() {
   }
 
   async function approveUser(userId: string) {
+    if (isDemo) return
     const user = users.find(u => u.id === userId)
     const newRole = user?.role === 'pending' ? 'user' : user?.role
     await supabase.from('profiles').update({ approved: true, role: newRole }).eq('id', userId)
@@ -57,6 +62,7 @@ export default function UserManagementPage() {
   }
 
   async function deleteUser(userId: string) {
+    if (isDemo) return
     if (!confirm('ลบผู้ใช้นี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) return
     await supabase.from('profiles').delete().eq('id', userId)
     loadUsers()
@@ -65,6 +71,15 @@ export default function UserManagementPage() {
   async function createInvitation() {
     if (!inviteEmail) return
     setInviteMsg('')
+
+    // Demo mode: generate a fake invite link
+    if (isDemo) {
+      const token = crypto.randomUUID()
+      setInviteLink(`${window.location.origin}/invite/${token}`)
+      setInviteMsg('🔶 โหมดตัวอย่าง — ลิงก์นี้ใช้ได้เฉพาะใน demo')
+      return
+    }
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const { data: profile } = await supabase.from('profiles')
@@ -82,6 +97,7 @@ export default function UserManagementPage() {
   }
 
   async function handleResetPassword() {
+    if (isDemo) { setResetError('🔶 โหมดตัวอย่าง — ไม่สามารถรีเซ็ตรหัสผ่านจริงได้'); return }
     if (!resetModal) return
     if (newPassword.length < 6) { setResetError('รหัสผ่านต้องมีอย่างน้อย 6 ตัว'); return }
     setResetting(true)
