@@ -28,13 +28,28 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Protected routes
-  const protectedPaths = ['/dashboard', '/projects', '/budget-control', '/budget-summary', '/budget-transfer', '/category-management', '/user-management', '/system-settings', '/fiscal-years', '/profile']
+  const protectedPaths = ['/dashboard', '/projects', '/budget-control', '/budget-summary', '/budget-transfer', '/category-management', '/user-management', '/system-settings', '/fiscal-years', '/profile', '/onboarding']
   const isProtected = protectedPaths.some(p => request.nextUrl.pathname.startsWith(p))
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // Check approval status for protected routes
+  if (isProtected && user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('approved, role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile && !profile.approved) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/pending'
+      return NextResponse.redirect(url)
+    }
   }
 
   // Redirect logged-in users away from login

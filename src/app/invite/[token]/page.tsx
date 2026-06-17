@@ -62,41 +62,35 @@ export default function InvitePage() {
     setAccepting(true)
     setError('')
 
-    try {
-      // Check if logged in
-      const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
 
-      if (!user) {
-        // Demo mode or not logged in → redirect to register with invite params
-        router.push(`/register?invite=${token}&email=${encodeURIComponent(inviteEmail)}`)
-        return
-      }
-
-      // Add to organization_members
-      const { error: memberError } = await supabase.from('organization_members').insert({
-        organization_id: orgId,
-        profile_id: user.id,
-        role: inviteRole,
-      })
-
-      if (memberError) {
-        // Demo mode — simulate success
-        setState('accepted')
-        return
-      }
-
-      // Update invitation status
-      await supabase.from('invitations').update({ status: 'accepted' }).eq('token', token)
-
-      // Update profile's active org
-      await supabase.from('profiles').update({ active_organization_id: orgId }).eq('id', user.id)
-
-      setState('accepted')
-    } catch (e: any) {
-      // Demo mode fallback
-      setState('accepted')
+    if (!user) {
+      router.push(`/register?invite=${token}&email=${encodeURIComponent(inviteEmail)}`)
+      return
     }
 
+    // Add to organization_members
+    const { error: memberError } = await supabase.from('organization_members').upsert({
+      organization_id: orgId, profile_id: user.id, role: inviteRole,
+    }, { onConflict: 'organization_id, profile_id' })
+
+    if (memberError) {
+      if (memberError.message?.includes('duplicate')) {
+        // Already a member — still update invite status + redirect
+      } else {
+        setError('ไม่สามารถเข้าร่วมได้: ' + memberError.message)
+        setAccepting(false)
+        return
+      }
+    }
+
+    // Update invitation status
+    await supabase.from('invitations').update({ status: 'accepted' }).eq('token', token)
+
+    // Update profile's active org
+    await supabase.from('profiles').update({ active_organization_id: orgId }).eq('id', user.id)
+
+    setState('accepted')
     setAccepting(false)
   }
 

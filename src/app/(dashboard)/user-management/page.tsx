@@ -30,7 +30,16 @@ export default function UserManagementPage() {
   }
 
   async function updateStatus(userId: string, role: string, approved: boolean) {
-    await supabase.from('profiles').update({ role, approved }).eq('id', userId)
+    // If approving, auto-upgrade from 'pending' to 'user' if still pending
+    const effectiveRole = approved && role === 'pending' ? 'user' : role
+    await supabase.from('profiles').update({ role: effectiveRole, approved }).eq('id', userId)
+    loadUsers()
+  }
+
+  async function approveUser(userId: string) {
+    const user = users.find(u => u.id === userId)
+    const newRole = user?.role === 'pending' ? 'user' : user?.role
+    await supabase.from('profiles').update({ approved: true, role: newRole }).eq('id', userId)
     loadUsers()
   }
 
@@ -38,6 +47,25 @@ export default function UserManagementPage() {
     if (!confirm('ลบผู้ใช้นี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) return
     await supabase.from('profiles').delete().eq('id', userId)
     loadUsers()
+  }
+
+  async function createInvitation() {
+    if (!inviteEmail) return
+    setInviteMsg('')
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase.from('profiles')
+      .select('active_organization_id').eq('id', user.id).single()
+    const orgId = profile?.active_organization_id
+    if (!orgId) return
+    const token = crypto.randomUUID()
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    const { error } = await supabase.from('invitations').insert({
+      organization_id: orgId, email: inviteEmail, role: inviteRole,
+      invited_by: user.id, token, status: 'pending', expires_at: expiresAt,
+    })
+    if (error) { setInviteMsg('❌ ' + error.message); return }
+    setInviteLink(`${window.location.origin}/invite/${token}`)
   }
 
   async function handleResetPassword() {
@@ -130,12 +158,7 @@ export default function UserManagementPage() {
                   </select>
                 </div>
               </div>
-              <button onClick={() => {
-                if (!inviteEmail) return
-                // Demo: simulate invite link
-                const token = Math.random().toString(36).substring(2, 10)
-                setInviteLink(`https://budget-control.app/invite/${token}`)
-              }}
+              <button onClick={createInvitation}
                 className="w-full py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition flex items-center justify-center gap-2">
                 <Send className="w-4 h-4" /> สร้างลิงก์เชิญ
               </button>

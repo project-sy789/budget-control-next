@@ -1,17 +1,21 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Building2, Mail, Lock, School, Globe, ArrowRight, CheckCircle } from 'lucide-react'
+import { Building2, Mail, Lock, School, Globe, ArrowRight, CheckCircle, Users } from 'lucide-react'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
+  const inviteToken = searchParams.get('invite')
+  const inviteEmailParam = searchParams.get('email')
+
   const [step, setStep] = useState<'form' | 'success'>('form')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(inviteEmailParam || '')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [schoolName, setSchoolName] = useState('')
@@ -19,6 +23,20 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [demoMode, setDemoMode] = useState(false)
+  const [inviteData, setInviteData] = useState<any>(null)
+
+  // Load invitation data if invite token present
+  useEffect(() => {
+    if (!inviteToken) return
+    supabase.from('invitations').select('*, organizations:organization_id(name, id)')
+      .eq('token', inviteToken).single()
+      .then(({ data }) => {
+        if (data) {
+          setInviteData(data)
+          setSchoolName(data.organizations?.name || '')
+        }
+      })
+  }, [inviteToken])
 
   // Auto-generate slug from school name
   const handleSchoolNameChange = (val: string) => {
@@ -69,16 +87,33 @@ export default function RegisterPage() {
 
       const userId = authData.user.id
 
-      // 2. Create profile
+      // 2. Create profile — pending approval
       await supabase.from('profiles').insert({
-        id: userId,
-        email,
-        display_name: displayName,
-        role: 'admin',
-        approved: true,
+        id: userId, email, display_name: displayName,
+        role: 'pending', approved: false,
       })
 
-      // 3. Create organization
+      // ── Invite flow: join existing org ──
+      if (inviteToken && inviteData) {
+        const orgId = inviteData.organization_id
+
+        // Add as member
+        await supabase.from('organization_members').insert({
+          organization_id: orgId, profile_id: userId, role: inviteData.role || 'member',
+        })
+
+        // Set active org
+        await supabase.from('profiles').update({ active_organization_id: orgId }).eq('id', userId)
+
+        // Mark invitation accepted
+        await supabase.from('invitations').update({ status: 'accepted' }).eq('token', inviteToken)
+
+        setStep('success')
+        setLoading(false)
+        return
+      }
+
+      // ── New school flow ──
       const slug = schoolSlug || slugify(schoolName)
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
@@ -121,29 +156,31 @@ export default function RegisterPage() {
 
   if (step === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-amber-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">สมัครสมาชิกสำเร็จ! 🎉</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">สมัครสมาชิกสำเร็จ! 📝</h1>
           <p className="text-gray-600 mb-2">
             โรงเรียน <span className="font-semibold text-purple-600">{schoolName}</span> ถูกสร้างเรียบร้อยแล้ว
           </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-left">
+            <p className="text-sm font-semibold text-amber-800 mb-1">⏳ รอการอนุมัติจากผู้ดูแลระบบ</p>
+            <p className="text-xs text-amber-700">
+              ระบบจะตรวจสอบข้อมูลโรงเรียนของท่านและอนุมัติภายใน 24 ชั่วโมง เมื่อได้รับการอนุมัติแล้ว ท่านจะสามารถเข้าสู่ระบบได้ทันที
+            </p>
+          </div>
           {demoMode && (
-            <p className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2 mb-4">
-              ⚠️ Demo Mode: ไม่ได้เชื่อมต่อ Supabase จริง — <Link href="/login" className="underline">เข้าสู่ระบบ</Link> เพื่อทดสอบ
+            <p className="text-xs text-gray-400 mb-4">
+              ⚠️ Demo Mode — <Link href="/login" className="underline">เข้าสู่ระบบ</Link> เพื่อทดสอบ
             </p>
           )}
           <div className="space-y-3">
-            <button onClick={() => router.push('/onboarding')}
-              className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition flex items-center justify-center gap-2">
-              ตั้งค่าโรงเรียน <ArrowRight className="w-4 h-4" />
-            </button>
-            <button onClick={() => router.push('/dashboard')}
-              className="w-full py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition">
-              ข้ามไปแดชบอร์ด
-            </button>
+            <Link href="/"
+              className="block w-full py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition">
+              กลับหน้าหลัก
+            </Link>
           </div>
         </div>
       </div>
@@ -154,11 +191,18 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-            <Building2 className="w-7 h-7 text-purple-600" />
+          <div className={`w-14 h-14 ${inviteData ? 'bg-green-100' : 'bg-purple-100'} rounded-xl flex items-center justify-center mx-auto mb-3`}>
+            {inviteData ? <Users className="w-7 h-7 text-green-600" /> : <Building2 className="w-7 h-7 text-purple-600" />}
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">สมัครใช้งาน</h1>
-          <p className="text-sm text-gray-500 mt-1">สร้างโรงเรียนของคุณและเริ่มควบคุมงบประมาณ</p>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {inviteData ? 'รับคำเชิญเข้าโรงเรียน' : 'สมัครใช้งาน'}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {inviteData
+              ? `คุณได้รับเชิญให้เข้าร่วม ${inviteData.organizations?.name || 'โรงเรียน'} ในฐานะ ${inviteData.role === 'admin' ? 'ผู้ดูแล' : inviteData.role === 'manager' ? 'ผู้จัดการ' : 'สมาชิก'}`
+              : 'สร้างโรงเรียนของคุณและเริ่มควบคุมงบประมาณ'
+            }
+          </p>
         </div>
 
         {error && (
@@ -168,7 +212,8 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleRegister} className="space-y-4">
-          {/* School info */}
+          {/* School info — only for new schools */}
+          {!inviteData && (<>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">
               <School className="w-3.5 h-3.5 inline mr-1" /> ชื่อโรงเรียน
@@ -201,6 +246,7 @@ export default function RegisterPage() {
           </div>
 
           <hr className="border-gray-100" />
+          </>)}
 
           {/* User info */}
           <div>
@@ -249,9 +295,9 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:opacity-50 transition shadow-sm shadow-purple-200 flex items-center justify-center gap-2"
+            className={`w-full py-3 text-white rounded-xl font-medium disabled:opacity-50 transition shadow-sm flex items-center justify-center gap-2 ${inviteData ? 'bg-green-600 hover:bg-green-700 shadow-green-200' : 'bg-purple-600 hover:bg-purple-700 shadow-purple-200'}`}
           >
-            {loading ? 'กำลังสมัคร...' : 'สร้างโรงเรียนและเริ่มใช้งาน'}
+            {loading ? 'กำลังสมัคร...' : inviteData ? 'สมัครและเข้าร่วมโรงเรียน' : 'สร้างโรงเรียนและเริ่มใช้งาน'}
             {!loading && <ArrowRight className="w-4 h-4" />}
           </button>
         </form>
