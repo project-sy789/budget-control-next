@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { getSchoolDetail } from '@/lib/api/admin-school'
-import { adminResetPassword } from '@/lib/auth/admin-actions'
+import { getSchoolDetail, addFiscalYear, setActiveFiscalYear, deleteFiscalYear } from '@/lib/api/admin-school'
+import { adminResetPassword, updateMemberRole, removeMember, updateUserProfile } from '@/lib/auth/admin-actions'
 import { 
   Building2, Users, FolderOpen, Calculator, ArrowLeft, Mail, Clock, 
-  CheckCircle, XCircle, KeyRound, BarChart3, Calendar, Tag, RefreshCw
+  CheckCircle, XCircle, KeyRound, Calendar, Tag, RefreshCw, PlusCircle, Trash2, Edit3, Save, X, UserCheck
 } from 'lucide-react'
 
 export default function SchoolDetailPage() {
@@ -21,6 +21,18 @@ export default function SchoolDetailPage() {
   const [newPassword, setNewPassword] = useState('')
   const [resetMsg, setResetMsg] = useState('')
   const [resetting, setResetting] = useState(false)
+
+  // Fiscal year management
+  const [showAddFY, setShowAddFY] = useState(false)
+  const [fyName, setFyName] = useState('')
+  const [fyStart, setFyStart] = useState('')
+  const [fyEnd, setFyEnd] = useState('')
+  const [fyMsg, setFyMsg] = useState('')
+
+  // Member management
+  const [editingMember, setEditingMember] = useState<string | null>(null)
+  const [editMemberRole, setEditMemberRole] = useState('')
+  const [memberMsg, setMemberMsg] = useState('')
 
   useEffect(() => { loadData() }, [id])
 
@@ -43,6 +55,57 @@ export default function SchoolDetailPage() {
     if (result?.error) { setResetMsg('❌ ' + result.error) }
     else { setResetMsg('✅ รีเซ็ตสำเร็จ! รหัสใหม่: ' + newPassword); setNewPassword(''); loadData() }
     setResetting(false)
+  }
+
+  async function handleSaveMemberRole(profileId: string) {
+    setMemberMsg('')
+    const res = await updateMemberRole(id as string, profileId, editMemberRole)
+    if (res?.error) { setMemberMsg('❌ ' + res.error); return }
+    setMemberMsg('✅ เปลี่ยนบทบาทแล้ว')
+    setEditingMember(null)
+    loadData()
+  }
+
+  async function handleRemoveMember(profileId: string, name: string) {
+    if (!confirm(`ถอด "${name}" ออกจากโรงเรียนนี้?`)) return
+    setMemberMsg('')
+    const res = await removeMember(id as string, profileId)
+    if (res?.error) { setMemberMsg('❌ ' + res.error); return }
+    setMemberMsg('✅ ถอดสมาชิกแล้ว')
+    loadData()
+  }
+
+  async function handleApproveMember(profileId: string) {
+    setMemberMsg('')
+    const res = await updateUserProfile(profileId, { approved: true })
+    if (res?.error) { setMemberMsg('❌ ' + res.error); return }
+    setMemberMsg('✅ อนุมัติสมาชิกแล้ว')
+    loadData()
+  }
+
+  async function handleAddFiscalYear() {
+    if (!fyName || !fyStart || !fyEnd) { setFyMsg('❌ กรุณากรอกข้อมูลให้ครบ'); return }
+    setFyMsg('')
+    const res = await addFiscalYear(id as string, fyName, fyStart, fyEnd)
+    if (res?.error) { setFyMsg('❌ ' + res.error); return }
+    setFyMsg('✅ เพิ่มปีงบประมาณแล้ว')
+    setShowAddFY(false); setFyName(''); setFyStart(''); setFyEnd('')
+    loadData()
+  }
+
+  async function handleSetActive(fyId: string) {
+    const res = await setActiveFiscalYear(id as string, fyId)
+    if (res?.error) { setFyMsg('❌ ' + res.error); return }
+    setFyMsg('✅ เปลี่ยนปีที่ใช้งานแล้ว')
+    loadData()
+  }
+
+  async function handleDeleteFY(fyId: string) {
+    if (!confirm('ลบปีงบประมาณนี้? รายการที่เกี่ยวข้องอาจได้รับผลกระทบ')) return
+    const res = await deleteFiscalYear(fyId)
+    if (res?.error) { setFyMsg('❌ ' + res.error); return }
+    setFyMsg('✅ ลบปีงบประมาณแล้ว')
+    loadData()
   }
 
   const formatAmount = (a: number) => new Intl.NumberFormat('th-TH').format(a || 0)
@@ -129,22 +192,91 @@ export default function SchoolDetailPage() {
           ))}
         </div>
 
-        {fiscalYears.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center gap-2"><Calendar className="w-4 h-4" /> ปีงบประมาณ</h2>
+        {/* Fiscal Years — Manageable */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase flex items-center gap-2"><Calendar className="w-4 h-4" /> ปีงบประมาณ ({fiscalYears.length})</h2>
+            <button onClick={() => { setShowAddFY(!showAddFY); setFyMsg(''); setFyName(''); setFyStart(''); setFyEnd('') }}
+              className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition flex items-center gap-1">
+              <PlusCircle className="w-3.5 h-3.5" /> เพิ่มปี
+            </button>
+          </div>
+
+          {fyMsg && (
+            <div className={`mb-3 px-3 py-2 rounded-lg text-xs ${fyMsg.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{fyMsg}</div>
+          )}
+
+          {/* Add FY form */}
+          {showAddFY && (
+            <div className="bg-white rounded-xl p-4 mb-3 border border-purple-200 shadow-sm">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">ชื่อปี</label>
+                  <input value={fyName} onChange={e => setFyName(e.target.value)} placeholder="เช่น 2569"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">วันที่เริ่ม</label>
+                  <input type="date" value={fyStart} onChange={e => setFyStart(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">วันที่สิ้นสุด</label>
+                  <input type="date" value={fyEnd} onChange={e => setFyEnd(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                </div>
+                <div className="flex items-end gap-2">
+                  <button onClick={handleAddFiscalYear}
+                    className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">บันทึก</button>
+                  <button onClick={() => setShowAddFY(false)}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50">ยกเลิก</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {fiscalYears.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {fiscalYears.map((fy: any) => (
-                <span key={fy.id} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${fy.is_active ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {fy.name} {fy.is_active && '✓'}
-                </span>
+                <div key={fy.id}
+                  className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                    fy.is_active ? 'bg-purple-100 text-purple-700 ring-2 ring-purple-300' : 'bg-white border border-gray-200 text-gray-600 hover:border-purple-200'
+                  }`}>
+                  <span>{fy.name}</span>
+                  <span className="text-[10px] text-gray-400">
+                    {fy.start_date?.slice(0, 7)} – {fy.end_date?.slice(0, 7)}
+                  </span>
+                  {!fy.is_active && (
+                    <>
+                      <button onClick={() => handleSetActive(fy.id)}
+                        className="ml-1 px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded text-[10px] hover:bg-purple-200 opacity-0 group-hover:opacity-100 transition"
+                        title="ตั้งเป็นปีที่ใช้งาน">ใช้ปีนี้</button>
+                      <button onClick={() => handleDeleteFY(fy.id)}
+                        className="px-1 py-0.5 text-red-400 hover:text-red-600 rounded opacity-0 group-hover:opacity-100 transition"
+                        title="ลบ">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </>
+                  )}
+                  {fy.is_active && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-white text-purple-600 rounded text-[10px] font-bold">✓ ใช้งาน</span>
+                  )}
+                </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-6 text-gray-400 text-sm bg-white rounded-xl border border-dashed border-gray-200">
+              ยังไม่มีปีงบประมาณ — กด "เพิ่มปี" เพื่อเริ่มต้น
+            </div>
+          )}
+        </div>
 
         {/* Members */}
         <div className="mb-8">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> สมาชิก ({members.length})</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase flex items-center gap-2"><Users className="w-4 h-4" /> สมาชิก ({members.length})</h2>
+          </div>
+          {memberMsg && <div className={`mb-3 px-3 py-2 rounded-lg text-xs ${memberMsg.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{memberMsg}</div>}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -155,13 +287,14 @@ export default function SchoolDetailPage() {
                     <th className="text-center px-3 py-3 font-medium text-gray-500 text-xs uppercase">บทบาท</th>
                     <th className="text-center px-3 py-3 font-medium text-gray-500 text-xs uppercase">สถานะ</th>
                     <th className="text-right px-3 py-3 font-medium text-gray-500 text-xs uppercase">เข้าร่วมเมื่อ</th>
-                    <th className="text-center px-3 py-3 font-medium text-gray-500 text-xs uppercase w-[80px]"></th>
+                    <th className="text-center px-3 py-3 font-medium text-gray-500 text-xs uppercase w-[140px]">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {members.map((m: any) => {
                     const profile = m.profiles
                     if (!profile) return null
+                    const isEditing = editingMember === profile.id
                     return (
                       <tr key={profile.id} className="hover:bg-purple-50/30 transition">
                         <td className="px-4 py-3">
@@ -176,15 +309,19 @@ export default function SchoolDetailPage() {
                           </div>
                         </td>
                         <td className="px-3 py-3">
-                          <div className="flex items-center gap-1">
-                            <Mail className="w-3 h-3 text-gray-400" />
-                            <span className="text-xs text-gray-600">{profile.email}</span>
-                          </div>
+                          <div className="flex items-center gap-1"><Mail className="w-3 h-3 text-gray-400" /><span className="text-xs text-gray-600">{profile.email}</span></div>
                         </td>
                         <td className="px-3 py-3 text-center">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColors[m.role] || 'bg-gray-100'}`}>
-                            {roleLabels[m.role] || m.role}
-                          </span>
+                          {isEditing ? (
+                            <select value={editMemberRole} onChange={e => setEditMemberRole(e.target.value)}
+                              className="text-xs border border-purple-200 rounded px-1.5 py-0.5">
+                              <option value="owner">เจ้าของ</option><option value="admin">ผู้ดูแล</option><option value="manager">ผู้จัดการ</option><option value="member">สมาชิก</option>
+                            </select>
+                          ) : (
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColors[m.role] || 'bg-gray-100'}`}>
+                              {roleLabels[m.role] || m.role}
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-3 text-center">
                           {profile.approved ? (
@@ -193,15 +330,29 @@ export default function SchoolDetailPage() {
                             <span className="inline-flex items-center gap-1 text-xs text-yellow-600"><Clock className="w-3 h-3" /> รออนุมัติ</span>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-right text-xs text-gray-400">
-                          {m.joined_at ? formatDate(m.joined_at) : '—'}
-                        </td>
+                        <td className="px-3 py-3 text-right text-xs text-gray-400">{m.joined_at ? formatDate(m.joined_at) : '—'}</td>
                         <td className="px-3 py-3 text-center">
-                          <button onClick={() => { setResetModal({ userId: profile.id, displayName: profile.display_name || profile.email }); setResetMsg(''); setNewPassword('') }}
-                            className="p-1.5 hover:bg-purple-50 rounded-lg transition text-purple-500 hover:text-purple-700"
-                            title="รีเซ็ตรหัสผ่าน">
-                            <KeyRound className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center justify-center gap-0.5">
+                            {isEditing ? (
+                              <>
+                                <button onClick={() => handleSaveMemberRole(profile.id)} className="p-1 hover:bg-green-50 rounded text-green-600" title="บันทึก"><Save className="w-3 h-3" /></button>
+                                <button onClick={() => setEditingMember(null)} className="p-1 hover:bg-gray-100 rounded text-gray-400" title="ยกเลิก"><X className="w-3 h-3" /></button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => { setEditingMember(profile.id); setEditMemberRole(m.role); setMemberMsg('') }}
+                                  className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600" title="เปลี่ยนบทบาท"><Edit3 className="w-3 h-3" /></button>
+                                {!profile.approved && (
+                                  <button onClick={() => handleApproveMember(profile.id)}
+                                    className="p-1 hover:bg-green-50 rounded text-gray-400 hover:text-green-600" title="อนุมัติ"><UserCheck className="w-3 h-3" /></button>
+                                )}
+                                <button onClick={() => { setResetModal({ userId: profile.id, displayName: profile.display_name || profile.email }); setResetMsg(''); setNewPassword('') }}
+                                  className="p-1 hover:bg-purple-50 rounded text-gray-400 hover:text-purple-600" title="รีเซ็ตรหัสผ่าน"><KeyRound className="w-3 h-3" /></button>
+                                <button onClick={() => handleRemoveMember(profile.id, profile.display_name || profile.email)}
+                                  className="p-1 hover:bg-red-50 rounded text-gray-400 hover:text-red-600" title="ถอดจากโรงเรียน"><Trash2 className="w-3 h-3" /></button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )
@@ -209,9 +360,7 @@ export default function SchoolDetailPage() {
                 </tbody>
               </table>
             </div>
-            {members.length === 0 && (
-              <div className="py-8 text-center text-gray-400 text-sm">ยังไม่มีสมาชิก</div>
-            )}
+            {members.length === 0 && <div className="py-8 text-center text-gray-400 text-sm">ยังไม่มีสมาชิก</div>}
           </div>
         </div>
 
