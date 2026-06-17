@@ -27,6 +27,8 @@ export default function UserManagementPage() {
   const [editingUser, setEditingUser] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editRole, setEditRole] = useState('')
+  const [editDepartment, setEditDepartment] = useState('')
+  const [editPosition, setEditPosition] = useState('')
 
   const supabase = createClient()
 
@@ -96,7 +98,7 @@ export default function UserManagementPage() {
   async function handleSaveEdit(userId: string) {
     if (isDemo) return
     setActionMsg('')
-    const res = await updateUserProfile(userId, { display_name: editName, role: editRole })
+    const res = await updateUserProfile(userId, { display_name: editName, role: editRole, department: editDepartment, position: editPosition })
     if (res?.error) { setActionMsg('❌ ' + res.error); return }
     setActionMsg('✅ อัปเดตผู้ใช้แล้ว')
     setEditingUser(null)
@@ -347,7 +349,16 @@ export default function UserManagementPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{user.email}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs">
-                    {[user.position, user.department].filter(Boolean).join(' / ') || '-'}
+                    {isEditing ? (
+                      <div className="flex gap-1.5">
+                        <input value={editPosition} onChange={e => setEditPosition(e.target.value)}
+                          className="w-1/2 px-1.5 py-0.5 border border-purple-200 rounded text-xs" placeholder="ตำแหน่ง" />
+                        <input value={editDepartment} onChange={e => setEditDepartment(e.target.value)}
+                          className="w-1/2 px-1.5 py-0.5 border border-purple-200 rounded text-xs" placeholder="แผนก" />
+                      </div>
+                    ) : (
+                      [user.position, user.department].filter(Boolean).join(' / ') || '-'
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {isEditing ? (
