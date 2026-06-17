@@ -1,18 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Building2, Mail, Lock, School, Globe, ArrowRight, CheckCircle, Users } from 'lucide-react'
 
+function getInviteParams() {
+  if (typeof window === 'undefined') return { token: null, email: null }
+  const p = new URLSearchParams(window.location.search)
+  return { token: p.get('invite'), email: p.get('email') }
+}
+
 export default function RegisterPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const supabase = createClient()
 
-  const inviteToken = searchParams.get('invite')
-  const inviteEmailParam = searchParams.get('email')
+  const [inviteToken] = useState(() => getInviteParams().token)
+  const [inviteEmailParam] = useState(() => getInviteParams().email)
 
   const [step, setStep] = useState<'form' | 'success'>('form')
   const [email, setEmail] = useState(inviteEmailParam || '')
