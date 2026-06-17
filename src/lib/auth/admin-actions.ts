@@ -13,7 +13,6 @@ export async function adminResetPassword(userId: string, newPassword: string) {
     userId,
     { password: newPassword }
   )
-
   if (error) return { error: error.message }
   return { success: 'รีเซ็ตรหัสผ่านสำเร็จ' }
 }
@@ -23,7 +22,6 @@ export async function getAllOrganizations() {
     .from('organizations')
     .select('*')
     .order('created_at', { ascending: false })
-
   if (error) throw new Error(error.message)
   return orgs
 }
@@ -32,13 +30,9 @@ export async function getOrganizationMemberCounts(): Promise<Record<string, numb
   const { data, error } = await supabaseAdmin()
     .from('organization_members')
     .select('organization_id')
-
   if (error || !data) return {}
-
   const counts: Record<string, number> = {}
-  for (const row of data) {
-    counts[row.organization_id] = (counts[row.organization_id] || 0) + 1
-  }
+  for (const row of data) counts[row.organization_id] = (counts[row.organization_id] || 0) + 1
   return counts
 }
 
@@ -47,7 +41,44 @@ export async function updateOrganizationStatus(orgId: string, newStatus: string)
     .from('organizations')
     .update({ subscription_status: newStatus })
     .eq('id', orgId)
-
   if (error) return { error: error.message }
   return { success: true }
+}
+
+// ── User management (all schools) ──
+
+export async function getAllUsers() {
+  // Get all profiles + their org membership
+  const { data: profiles, error: profileError } = await supabaseAdmin()
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (profileError || !profiles) return []
+
+  // Get all org memberships
+  const { data: memberships, error: memberError } = await supabaseAdmin()
+    .from('organization_members')
+    .select('profile_id, organization_id, role')
+
+  // Get all orgs
+  const { data: orgs } = await supabaseAdmin()
+    .from('organizations')
+    .select('id, name')
+
+  // Build lookup maps
+  const orgMap: Record<string, string> = {}
+  if (orgs) for (const o of orgs) orgMap[o.id] = o.name
+
+  const memberMap: Record<string, { orgId: string; role: string }> = {}
+  if (memberships) for (const m of memberships) {
+    // Use the first membership if user is in multiple orgs
+    if (!memberMap[m.profile_id]) memberMap[m.profile_id] = { orgId: m.organization_id, role: m.role }
+  }
+
+  return profiles.map(p => ({
+    ...p,
+    org_name: orgMap[memberMap[p.id]?.orgId] || '—',
+    org_role: memberMap[p.id]?.role || '—',
+  }))
 }
