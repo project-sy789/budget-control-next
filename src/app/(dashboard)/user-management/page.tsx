@@ -22,6 +22,7 @@ export default function UserManagementPage() {
   const [isDemo, setIsDemo] = useState(false)
   const [invitations, setInvitations] = useState<any[]>([])
   const [actionMsg, setActionMsg] = useState('')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // Inline edit state
   const [editingUser, setEditingUser] = useState<string | null>(null)
@@ -37,6 +38,7 @@ export default function UserManagementPage() {
   async function loadUsers() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      setCurrentUserId(session?.user?.id || null)
       const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
       
       if (!session || !data?.length) {
@@ -68,6 +70,10 @@ export default function UserManagementPage() {
   async function handleUpdateRole(userId: string, role: string) {
     if (isDemo) return
     setActionMsg('')
+    if (userId === currentUserId) {
+      setActionMsg('❌ ไม่สามารถเปลี่ยนบทบาทของตัวเองได้ — ให้ admin คนอื่นทำให้')
+      return
+    }
     const res = await updateUserProfile(userId, { role })
     if (res?.error) { setActionMsg('❌ ' + res.error); return }
     setActionMsg('✅ เปลี่ยนบทบาทแล้ว')
@@ -98,6 +104,10 @@ export default function UserManagementPage() {
   async function handleSaveEdit(userId: string) {
     if (isDemo) return
     setActionMsg('')
+    if (userId === currentUserId && editRole !== (users.find(u => u.id === userId)?.role)) {
+      setActionMsg('❌ ไม่สามารถเปลี่ยนบทบาทของตัวเองได้')
+      return
+    }
     const res = await updateUserProfile(userId, { display_name: editName, role: editRole, department: editDepartment, position: editPosition })
     if (res?.error) { setActionMsg('❌ ' + res.error); return }
     setActionMsg('✅ อัปเดตผู้ใช้แล้ว')
@@ -420,7 +430,9 @@ export default function UserManagementPage() {
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <select value={user.role} onChange={e => handleUpdateRole(user.id, e.target.value)}
-                            className="text-xs border border-gray-200 rounded px-1 py-0.5">
+                            disabled={user.id === currentUserId}
+                            className={`text-xs border border-gray-200 rounded px-1 py-0.5 ${user.id === currentUserId ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                            title={user.id === currentUserId ? 'ไม่สามารถเปลี่ยนบทบาทของตัวเอง' : ''}>
                             <option value="pending">รออนุมัติ</option>
                             <option value="user">ผู้ใช้</option>
                             <option value="manager">ผู้จัดการ</option>

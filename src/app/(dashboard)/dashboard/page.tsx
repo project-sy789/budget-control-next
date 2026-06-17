@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { FolderOpen, Calculator, TrendingUp, DollarSign, Eye, EyeOff, Table2, BarChart3, AlertTriangle, Download } from 'lucide-react'
 import { DEMO_PROJECTS, DEMO_TRANSACTIONS, DEMO_WORK_GROUPS } from '@/lib/mock-data'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, Legend } from 'recharts'
+import AnnouncementBanner from '@/components/AnnouncementBanner'
 
 const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6']
 
@@ -146,6 +147,8 @@ export default function DashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">แดชบอร์ด</h1>
+
+      <AnnouncementBanner />
 
       {/* ── Stats Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

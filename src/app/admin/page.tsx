@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getAllOrganizations, getOrganizationMemberCounts, updateOrganizationStatus, updateOrganization, deleteOrganization, getAllUsers, adminResetPassword, updateUserProfile, deleteUser } from '@/lib/auth/admin-actions'
-import { Building2, Users, FolderOpen, Calculator, Search, Shield, CheckCircle, RefreshCw, PlusCircle, Ban, Eye, Mail, KeyRound, Clock, XCircle, Edit3, Trash2, Save, X } from 'lucide-react'
+import { Building2, Users, FolderOpen, Calculator, Search, Shield, CheckCircle, RefreshCw, PlusCircle, Ban, Eye, Mail, KeyRound, Clock, XCircle, Edit3, Trash2, Save, X, Megaphone } from 'lucide-react'
 import Link from 'next/link'
+import { getAllAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement } from '@/lib/api/announcements'
 
-type Tab = 'schools' | 'users'
+type Tab = 'schools' | 'users' | 'announcements'
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('schools')
@@ -35,6 +36,13 @@ export default function AdminPage() {
   const [editUserRole, setEditUserRole] = useState('')
   const [editUserApproved, setEditUserApproved] = useState(false)
 
+  // Announcements
+  const [announcements, setAnnouncements] = useState<any[]>([])
+  const [aTitle, setATitle] = useState('')
+  const [aContent, setAContent] = useState('')
+  const [aType, setAType] = useState('info')
+  const [aMsg, setAMsg] = useState('')
+
   const supabase = createClient()
 
   useEffect(() => { loadAll() }, [])
@@ -49,6 +57,7 @@ export default function AdminPage() {
     } catch { const { data } = await supabase.from('organizations').select('*').order('created_at', { ascending: false }); loadedOrgs = data || []; setOrgs(loadedOrgs) }
     try { const allUsers = await getAllUsers(); if (allUsers) setUsers(allUsers) } catch {}
     try { const counts = await getOrganizationMemberCounts(); if (counts) setMemberCounts(counts) } catch {}
+    try { const anns = await getAllAnnouncements(); if (anns) setAnnouncements(anns) } catch {}
     try { const res = await fetch('/api/admin-stats'); if (res.ok) { const data = await res.json(); setStats({ totalOrgs: loadedOrgs.length, totalUsers: data.totalUsers || 0, totalProjects: data.totalProjects || 0, totalTransactions: data.totalTransactions || 0 }); setLoading(false); return } } catch {}
     setStats({ totalOrgs: loadedOrgs.length, totalUsers: users.length, totalProjects: 0, totalTransactions: 0 })
     setLoading(false)
@@ -113,6 +122,29 @@ export default function AdminPage() {
     catch (e: any) { setActionMsg('❌ ' + (e.message || 'เกิดข้อผิดพลาด')) }
   }
 
+  async function handleCreateAnnouncement() {
+    if (!aTitle.trim() || !aContent.trim()) { setAMsg('❌ กรุณากรอกหัวข้อและเนื้อหา'); return }
+    setAMsg('')
+    const res = await createAnnouncement({ title: aTitle, content: aContent, type: aType })
+    if (res?.error) { setAMsg('❌ ' + res.error); return }
+    setATitle(''); setAContent(''); setAType('info')
+    setAMsg('✅ ประกาศแล้ว')
+    loadAll()
+  }
+
+  async function handleToggleAnnouncement(id: string, active: boolean) {
+    const res = await updateAnnouncement(id, { is_active: !active })
+    if (res?.error) { setAMsg('❌ ' + res.error); return }
+    loadAll()
+  }
+
+  async function handleDeleteAnnouncement(id: string) {
+    if (!confirm('ลบประกาศนี้?')) return
+    const res = await deleteAnnouncement(id)
+    if (res?.error) { setAMsg('❌ ' + res.error); return }
+    loadAll()
+  }
+
   const filteredOrgs = orgs.filter(o => o.name.toLowerCase().includes(search.toLowerCase()) || o.slug.toLowerCase().includes(search.toLowerCase()))
   const filteredUsers = users.filter(u => (u.display_name || '').toLowerCase().includes(search.toLowerCase()) || (u.email || '').toLowerCase().includes(search.toLowerCase()) || (u.org_name || '').toLowerCase().includes(search.toLowerCase()))
   const activeCount = orgs.filter(o => o.subscription_status === 'active').length
@@ -146,6 +178,7 @@ export default function AdminPage() {
         <div className="flex gap-2 mb-6">
           <button onClick={() => { setTab('schools'); setSearch('') }} className={`px-5 py-2.5 rounded-xl text-sm font-medium transition flex items-center gap-2 ${tab === 'schools' ? 'bg-purple-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}><Building2 className="w-4 h-4" /> โรงเรียน ({orgs.length})</button>
           <button onClick={() => { setTab('users'); setSearch('') }} className={`px-5 py-2.5 rounded-xl text-sm font-medium transition flex items-center gap-2 ${tab === 'users' ? 'bg-purple-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}><Users className="w-4 h-4" /> ผู้ใช้ ({users.length})</button>
+          <button onClick={() => { setTab('announcements'); setSearch('') }} className={`px-5 py-2.5 rounded-xl text-sm font-medium transition flex items-center gap-2 ${tab === 'announcements' ? 'bg-purple-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}><Megaphone className="w-4 h-4" /> ประกาศ ({announcements.length})</button>
         </div>
 
         <div className="relative mb-6">
