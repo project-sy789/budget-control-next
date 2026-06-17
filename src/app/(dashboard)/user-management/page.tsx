@@ -71,6 +71,13 @@ export default function UserManagementPage() {
   async function createInvitation() {
     if (!inviteEmail) return
     setInviteMsg('')
+    setInviteLink('')
+
+    // Validate email
+    if (!inviteEmail.includes('@')) {
+      setInviteMsg('❌ กรุณากรอกอีเมลที่ถูกต้อง')
+      return
+    }
 
     // Demo mode: generate a fake invite link
     if (isDemo) {
@@ -80,20 +87,43 @@ export default function UserManagementPage() {
       return
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: profile } = await supabase.from('profiles')
-      .select('active_organization_id').eq('id', user.id).single()
-    const orgId = profile?.active_organization_id
-    if (!orgId) return
+    // Get user session (local, no network call)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) {
+      setInviteMsg('❌ ไม่พบ session — กรุณาเข้าสู่ระบบใหม่')
+      return
+    }
+    
+    const userId = session.user.id
+
+    // Get profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('active_organization_id')
+      .eq('id', userId)
+      .single()
+    
+    if (profileError || !profile?.active_organization_id) {
+      setInviteMsg('❌ ไม่พบข้อมูลองค์กร — ' + (profileError?.message || 'กรุณาติดต่อผู้ดูแล'))
+      return
+    }
+
+    const orgId = profile.active_organization_id
     const token = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    
     const { error } = await supabase.from('invitations').insert({
       organization_id: orgId, email: inviteEmail, role: inviteRole,
-      invited_by: user.id, token, status: 'pending', expires_at: expiresAt,
+      invited_by: userId, token, status: 'pending', expires_at: expiresAt,
     })
-    if (error) { setInviteMsg('❌ ' + error.message); return }
+    
+    if (error) { 
+      setInviteMsg('❌ สร้างลิงก์ไม่สำเร็จ: ' + error.message)
+      return 
+    }
+    
     setInviteLink(`${window.location.origin}/invite/${token}`)
+    setInviteMsg('✅ สร้างลิงก์เชิญสำเร็จ!')
   }
 
   async function handleResetPassword() {

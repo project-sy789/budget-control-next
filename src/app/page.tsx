@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import {
   Building2, BarChart3, Calculator, Users, Shield, Zap,
   CheckCircle, ArrowRight, Menu, X, Globe, Smartphone,
-  Download, Bell, Lock, Sparkles
+  Download, Bell, Lock, Sparkles, LayoutDashboard
 } from 'lucide-react'
 
 const FEATURES = [
@@ -26,6 +27,14 @@ const STEPS = [
 
 export default function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false)
+  const [loggedIn, setLoggedIn] = useState(false)
+  const supabase = createClient()
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setLoggedIn(!!session)
+    })
+  }, [])
 
   return (
     <div className="min-h-screen bg-white">
@@ -46,11 +55,21 @@ export default function LandingPage() {
             <div className="hidden md:flex items-center gap-6">
               <a href="#pricing" className="text-sm text-gray-600 hover:text-purple-600 transition">ทำไมฟรี?</a>
               <a href="#how" className="text-sm text-gray-600 hover:text-purple-600 transition">วิธีใช้งาน</a>
-              <Link href="/login" className="text-sm text-gray-600 hover:text-purple-600 transition">เข้าสู่ระบบ</Link>
-              <Link href="/register"
-                className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition shadow-sm shadow-green-200">
-                สมัครใช้งานฟรี
-              </Link>
+              {loggedIn ? (
+                <Link href="/dashboard"
+                  className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition shadow-sm shadow-purple-200 flex items-center gap-2">
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link href="/login" className="text-sm text-gray-600 hover:text-purple-600 transition">เข้าสู่ระบบ</Link>
+                  <Link href="/register"
+                    className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition shadow-sm shadow-green-200">
+                    สมัครใช้งานฟรี
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -64,11 +83,20 @@ export default function LandingPage() {
             <div className="md:hidden py-4 border-t border-gray-100 space-y-3">
               <a href="#features" className="block text-sm text-gray-600 py-2">ฟีเจอร์</a>
               <a href="#pricing" className="block text-sm text-gray-600 py-2">ทำไมฟรี?</a>
-              <Link href="/login" className="block text-sm text-gray-600 py-2">เข้าสู่ระบบ</Link>
-              <Link href="/register"
-                className="block text-center px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium">
-                สมัครใช้งานฟรี
-              </Link>
+              {loggedIn ? (
+                <Link href="/dashboard"
+                  className="block text-center px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium">
+                  📊 Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link href="/login" className="block text-sm text-gray-600 py-2">เข้าสู่ระบบ</Link>
+                  <Link href="/register"
+                    className="block text-center px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium">
+                    สมัครใช้งานฟรี
+                  </Link>
+                </>
+              )}
             </div>
           )}
         </div>

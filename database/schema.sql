@@ -260,6 +260,8 @@ ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_log ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
+
 -- Organizations: members can read their own org
 CREATE POLICY "Members can view their org" ON public.organizations
     FOR SELECT USING (
@@ -311,6 +313,10 @@ CREATE POLICY "Org-scoped access" ON public.system_settings FOR ALL
     WITH CHECK (organization_id = public.get_user_org_id());
 
 CREATE POLICY "Org-scoped access" ON public.activity_log FOR ALL
+    USING (organization_id = public.get_user_org_id())
+    WITH CHECK (organization_id = public.get_user_org_id());
+
+CREATE POLICY "Org-scoped access" ON public.invitations FOR ALL
     USING (organization_id = public.get_user_org_id())
     WITH CHECK (organization_id = public.get_user_org_id());
 
