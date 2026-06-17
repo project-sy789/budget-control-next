@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Building2, Mail, Lock, School, Globe, ArrowRight, CheckCircle, Users } from 'lucide-react'
+import { Building2, Mail, Lock, School, Globe, ArrowRight, CheckCircle, Users, ArrowLeft } from 'lucide-react'
 
 function getInviteParams() {
   if (typeof window === 'undefined') return { token: null, email: null }
@@ -193,7 +193,12 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4 relative">
+      {/* Back button */}
+      <Link href="/" className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-2 bg-white/80 hover:bg-white text-gray-600 rounded-lg text-sm transition shadow-sm border border-gray-200">
+        <ArrowLeft className="w-4 h-4" />
+        กลับหน้าหลัก
+      </Link>
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
         <div className="text-center mb-6">
           <div className={`w-14 h-14 ${inviteData ? 'bg-green-100' : 'bg-purple-100'} rounded-xl flex items-center justify-center mx-auto mb-3`}>

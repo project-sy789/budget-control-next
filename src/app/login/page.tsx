@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { login, signup } from '@/lib/auth/actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, User, Mail, Lock, Briefcase, MapPin } from 'lucide-react'
+import { Building2, User, Mail, Lock, Briefcase, MapPin, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false)
@@ -36,7 +36,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-600 to-blue-500 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-600 to-blue-500 p-4 relative">
+      {/* Back button */}
+      <Link href="/" className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm transition backdrop-blur-sm">
+        <ArrowLeft className="w-4 h-4" />
+        กลับหน้าหลัก
+      </Link>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4">
