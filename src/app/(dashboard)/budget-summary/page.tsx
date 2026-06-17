@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { DEMO_FISCAL_YEARS, DEMO_PROJECTS, DEMO_TRANSACTIONS } from '@/lib/mock-data'
+import { DEMO_FISCAL_YEARS, DEMO_PROJECTS, DEMO_TRANSACTIONS, DEMO_WORK_GROUPS } from '@/lib/mock-data'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts'
 import { TrendingDown, TrendingUp, Wallet, FolderOpen, BarChart3, Download } from 'lucide-react'
 
@@ -30,12 +30,14 @@ export default function BudgetSummaryPage() {
   const [chartMode, setChartMode] = useState<'absolute' | 'percent'>('absolute')
   const [loading, setLoading] = useState(true)
   const [isDemo, setIsDemo] = useState(false)
+  const [workGroupFilter, setWorkGroupFilter] = useState('all')
+  const [workGroups, setWorkGroups] = useState<any[]>([])
   const supabase = createClient()
 
   useEffect(() => {
     async function init() {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setIsDemo(true); setLoading(false); return }
+      if (!session) { setIsDemo(true); setLoading(false); setWorkGroups(DEMO_WORK_GROUPS); return }
       const { data: settings } = await supabase.from('system_settings').select('*').eq('setting_key', 'year_label_type')
       if (settings?.[0]) {
         const m: Record<string, string> = { fiscal_year: 'ปีงบประมาณ', academic_year: 'ปีการศึกษา', budget_year: 'ปีบัญชี' }
@@ -50,6 +52,9 @@ export default function BudgetSummaryPage() {
         setFiscalYears(DEMO_FISCAL_YEARS)
         setFiscalYearId('fy-1')
       }
+      // Load work groups
+      const { data: wgData } = await supabase.from('work_groups').select('*').eq('is_active', true).order('sort_order')
+      setWorkGroups(wgData?.length ? wgData : DEMO_WORK_GROUPS)
       setLoading(false)
     }
     init()
@@ -91,10 +96,16 @@ export default function BudgetSummaryPage() {
   const totalUsed = projects.reduce((s, p) => s + p.used, 0)
   const totalRemaining = totalBudget - totalUsed
 
+  // Work group filter
+  const filteredProjects = workGroupFilter === 'all' ? projects : projects.filter(p => p.work_group === workGroupFilter)
+  const filteredBudget = filteredProjects.reduce((s, p) => s + p.budget, 0)
+  const filteredUsed = filteredProjects.reduce((s, p) => s + p.used, 0)
+  const filteredRemaining = filteredBudget - filteredUsed
+
   // Smart grouping for chart readability
-  const threshold = totalBudget * 0.03
-  const major = projects.filter(p => p.budget >= threshold || projects.length <= 6)
-  const minor = projects.filter(p => p.budget < threshold && projects.length > 6)
+  const threshold = filteredBudget * 0.03
+  const major = filteredProjects.filter(p => p.budget >= threshold || filteredProjects.length <= 6)
+  const minor = filteredProjects.filter(p => p.budget < threshold && filteredProjects.length > 6)
   const othersBudget = minor.reduce((s, p) => s + p.budget, 0)
   const othersUsed = minor.reduce((s, p) => s + p.used, 0)
 
@@ -105,8 +116,8 @@ export default function BudgetSummaryPage() {
       budget: p.budget,
       used: p.used,
       remaining: p.remaining,
-      budgetPct: totalBudget > 0 ? ((p.budget / totalBudget) * 100).toFixed(1) : '0',
-      usedPct: totalBudget > 0 ? ((p.used / totalBudget) * 100).toFixed(1) : '0'
+      budgetPct: filteredBudget > 0 ? ((p.budget / filteredBudget) * 100).toFixed(1) : '0',
+      usedPct: filteredBudget > 0 ? ((p.used / filteredBudget) * 100).toFixed(1) : '0'
     })),
     ...(minor.length > 0 ? [{
       name: `อื่นๆ (${minor.length} โครงการ)`,
@@ -114,8 +125,8 @@ export default function BudgetSummaryPage() {
       budget: othersBudget,
       used: othersUsed,
       remaining: othersBudget - othersUsed,
-      budgetPct: totalBudget > 0 ? ((othersBudget / totalBudget) * 100).toFixed(1) : '0',
-      usedPct: totalBudget > 0 ? ((othersUsed / totalBudget) * 100).toFixed(1) : '0'
+      budgetPct: filteredBudget > 0 ? ((othersBudget / filteredBudget) * 100).toFixed(1) : '0',
+      usedPct: filteredBudget > 0 ? ((othersUsed / filteredBudget) * 100).toFixed(1) : '0'
     }] : [])
   ]
 
@@ -137,7 +148,7 @@ export default function BudgetSummaryPage() {
       </div>
 
       {/* Year Selector */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
         <select value={fiscalYearId} onChange={e => setFiscalYearId(e.target.value)}
           className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium min-w-[200px] bg-white">
           <option value="all">ทุก{yearLabel}</option>
@@ -148,18 +159,27 @@ export default function BudgetSummaryPage() {
             </option>
           ))}
         </select>
+        {workGroups.length > 0 && (
+          <select value={workGroupFilter} onChange={e => setWorkGroupFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium min-w-[140px] bg-white">
+            <option value="all">ทุกกลุ่มงาน</option>
+            {workGroups.map(wg => (
+              <option key={wg.id || wg.name} value={wg.name}>{wg.name}</option>
+            ))}
+          </select>
+        )}
         <span className="text-sm text-gray-500">
-          {projects.length} โครงการ • งบรวม ฿{totalBudget.toLocaleString()}
+          {filteredProjects.length} โครงการ • งบรวม ฿{filteredBudget.toLocaleString()}
         </span>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'งบประมาณรวม', value: fmtFull(totalBudget), icon: Wallet, color: 'text-purple-600' },
-          { label: 'ใช้ไปแล้ว', value: fmtFull(totalUsed), icon: TrendingDown, color: 'text-red-500' },
-          { label: 'คงเหลือ', value: fmtFull(totalRemaining), icon: TrendingUp, color: totalRemaining >= 0 ? 'text-green-600' : 'text-red-500' },
-          { label: 'โครงการ', value: `${projects.length}`, icon: FolderOpen, color: 'text-blue-600' },
+          { label: 'งบประมาณรวม', value: fmtFull(filteredBudget), icon: Wallet, color: 'text-purple-600' },
+          { label: 'ใช้ไปแล้ว', value: fmtFull(filteredUsed), icon: TrendingDown, color: 'text-red-500' },
+          { label: 'คงเหลือ', value: fmtFull(filteredRemaining), icon: TrendingUp, color: filteredRemaining >= 0 ? 'text-green-600' : 'text-red-500' },
+          { label: 'โครงการ', value: `${filteredProjects.length}`, icon: FolderOpen, color: 'text-blue-600' },
         ].map((c, i) => (
           <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <c.icon className={`w-4 h-4 ${c.color} mb-1`} />
@@ -170,7 +190,7 @@ export default function BudgetSummaryPage() {
       </div>
 
       {/* Chart mode toggle */}
-      {projects.length > 0 && (
+      {filteredProjects.length > 0 && (
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           <button onClick={() => setChartMode('absolute')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${chartMode === 'absolute' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
@@ -193,7 +213,7 @@ export default function BudgetSummaryPage() {
         <h3 className="font-semibold text-gray-800 mb-4 text-sm">
           เปรียบเทียบ — งบประมาณ vs ใช้ไป {chartMode === 'percent' && '(%)'}
         </h3>
-        {projects.length > 0 ? (
+        {filteredProjects.length > 0 ? (
           <ResponsiveContainer width="100%" height={Math.max(350, chartData.length * 45)}>
             <BarChart data={chartData} layout="vertical" barGap={2} margin={{ left: 0, right: 70, top: 5, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
@@ -224,11 +244,11 @@ export default function BudgetSummaryPage() {
       </div>
 
       {/* Detailed Table */}
-      {projects.length > 0 && (
+      {filteredProjects.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <h3 className="font-semibold text-gray-800 text-sm">รายละเอียดทั้งหมด</h3>
-            <span className="text-xs text-gray-400">{projects.length} โครงการ</span>
+            <span className="text-xs text-gray-400">{filteredProjects.length} โครงการ</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -244,7 +264,7 @@ export default function BudgetSummaryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {projects.map(p => {
+                {filteredProjects.map(p => {
                   const pct = p.budget > 0 ? (p.used / p.budget) * 100 : 0
                   const barColor = pct > 100 ? 'bg-red-500' : pct > 80 ? 'bg-yellow-500' : 'bg-green-500'
                   return (
@@ -271,16 +291,16 @@ export default function BudgetSummaryPage() {
               </tbody>
               <tfoot className="bg-gray-50/80 font-semibold">
                 <tr>
-                  <td className="px-5 py-2.5 text-gray-600">รวม {projects.length} โครงการ</td>
+                  <td className="px-5 py-2.5 text-gray-600">รวม {filteredProjects.length} โครงการ</td>
                   <td />
-                  <td className="px-3 py-2.5 text-right text-purple-600">฿{totalBudget.toLocaleString()}</td>
+                  <td className="px-3 py-2.5 text-right text-purple-600">฿{filteredBudget.toLocaleString()}</td>
                   <td className="px-3 py-2.5 text-right text-green-600">
-                    ฿{projects.reduce((s, p) => s + p.income, 0).toLocaleString()}
+                    ฿{filteredProjects.reduce((s, p) => s + p.income, 0).toLocaleString()}
                   </td>
                   <td className="px-3 py-2.5 text-right text-red-500">
-                    ฿{projects.reduce((s, p) => s + p.expense, 0).toLocaleString()}
+                    ฿{filteredProjects.reduce((s, p) => s + p.expense, 0).toLocaleString()}
                   </td>
-                  <td className="px-3 py-2.5 text-right text-green-600">฿{totalRemaining.toLocaleString()}</td>
+                  <td className="px-3 py-2.5 text-right text-green-600">฿{filteredRemaining.toLocaleString()}</td>
                   <td className="px-3 py-2.5 text-xs text-gray-500">100%</td>
                 </tr>
               </tfoot>

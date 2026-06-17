@@ -4,15 +4,16 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Plus, Search, Download } from 'lucide-react'
-import { DEMO_FISCAL_YEARS, DEMO_PROJECTS, DEMO_CATEGORIES, DEMO_TRANSACTIONS } from '@/lib/mock-data'
+import { DEMO_FISCAL_YEARS, DEMO_PROJECTS, DEMO_CATEGORIES, DEMO_TRANSACTIONS, DEMO_WORK_GROUPS } from '@/lib/mock-data'
 
 export default function BudgetControlPage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [projects, setProjects] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [fiscalYears, setFiscalYears] = useState<any[]>([])
+  const [workGroups, setWorkGroups] = useState<any[]>([])
   const [yearLabel, setYearLabel] = useState('ปีงบประมาณ')
-  const [filters, setFilters] = useState({ fiscal_year_id: 'all', project_id: 'all', type: 'all', search: '' })
+  const [filters, setFilters] = useState({ fiscal_year_id: 'all', project_id: 'all', type: 'all', work_group: 'all', search: '' })
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -41,13 +42,15 @@ export default function BudgetControlPage() {
     setFiscalYears(fyData.data?.length ? fyData.data : DEMO_FISCAL_YEARS)
     setProjects(projData.data?.length ? projData.data : DEMO_PROJECTS)
     setCategories(catData.data?.length ? catData.data : DEMO_CATEGORIES)
+    setWorkGroups(DEMO_WORK_GROUPS) // Work groups come from demo or loaded separately
     setTransactions(txData.data?.length ? txData.data : DEMO_TRANSACTIONS)
     setLoading(false)
   }
 
   // Get project fiscal year mapping for filtering
   const projectFyMap: Record<string, string> = {}
-  projects.forEach(p => { projectFyMap[p.id] = p.fiscal_year_id })
+  const projectWgMap: Record<string, string> = {}
+  projects.forEach(p => { projectFyMap[p.id] = p.fiscal_year_id; projectWgMap[p.id] = p.work_group })
 
   const filtered = transactions.filter(tx => {
     if (filters.fiscal_year_id !== 'all') {
@@ -55,6 +58,10 @@ export default function BudgetControlPage() {
       if (txFyId !== filters.fiscal_year_id) return false
     }
     if (filters.project_id !== 'all' && tx.project_id !== filters.project_id) return false
+    if (filters.work_group !== 'all') {
+      const txWg = tx.projects?.work_group || projectWgMap[tx.project_id]
+      if (txWg !== filters.work_group) return false
+    }
     if (filters.type !== 'all') {
       if (filters.type === 'transfer') return tx.transaction_type === 'transfer_in' || tx.transaction_type === 'transfer_out'
       if (tx.transaction_type !== filters.type) return false
@@ -111,6 +118,13 @@ export default function BudgetControlPage() {
           <option value="income">รายรับ</option>
           <option value="expense">รายจ่าย</option>
           <option value="transfer">โอน</option>
+        </select>
+        <select value={filters.work_group} onChange={e => setFilters({ ...filters, work_group: e.target.value })}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-[120px]">
+          <option value="all">ทุกกลุ่มงาน</option>
+          {workGroups.map(wg => (
+            <option key={wg.id || wg.name} value={wg.name}>{wg.name}</option>
+          ))}
         </select>
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />

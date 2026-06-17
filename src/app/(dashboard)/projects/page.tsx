@@ -18,6 +18,7 @@ export default function ProjectsPage() {
   const [activeFyId, setActiveFyId] = useState<string>('active')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [workGroupFilter, setWorkGroupFilter] = useState('all')
   const [showModal, setShowModal] = useState(false)
   const [editingProject, setEditingProject] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -89,6 +90,7 @@ export default function ProjectsPage() {
   const filtered = projects.filter(p => {
     if (displayFyId && activeFyId !== 'all' && p.fiscal_year_id !== displayFyId) return false
     if (statusFilter !== 'all' && p.status !== statusFilter) return false
+    if (workGroupFilter !== 'all' && p.work_group !== workGroupFilter) return false
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
@@ -298,6 +300,13 @@ export default function ProjectsPage() {
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-200 focus:border-purple-400 outline-none transition" />
         </div>
+        <select value={workGroupFilter} onChange={e => setWorkGroupFilter(e.target.value)}
+          className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-purple-200 min-w-[130px]">
+          <option value="all">ทุกกลุ่มงาน</option>
+          {workGroups.map(wg => (
+            <option key={wg.id || wg.name} value={wg.name}>{wg.name}</option>
+          ))}
+        </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
           className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-purple-200">
           <option value="all">ทุกสถานะ</option>

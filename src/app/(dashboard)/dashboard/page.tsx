@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { FolderOpen, Calculator, TrendingUp, DollarSign, Eye, EyeOff, Table2, BarChart3, AlertTriangle, Download } from 'lucide-react'
-import { DEMO_PROJECTS, DEMO_TRANSACTIONS } from '@/lib/mock-data'
+import { DEMO_PROJECTS, DEMO_TRANSACTIONS, DEMO_WORK_GROUPS } from '@/lib/mock-data'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, Legend } from 'recharts'
 
 const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6']
@@ -16,6 +16,8 @@ export default function DashboardPage() {
   const [chartMode, setChartMode] = useState<'absolute' | 'percent'>('absolute')
   const [showTable, setShowTable] = useState(true)
   const [loading, setLoading] = useState(true)
+  const [workGroupFilter, setWorkGroupFilter] = useState('all')
+  const [workGroups, setWorkGroups] = useState<any[]>([])
   const supabase = createClient()
 
   useEffect(() => { loadData() }, [])
@@ -34,6 +36,7 @@ export default function DashboardPage() {
       if (!session || projectCount === null) {
         setProjectSummary(DEMO_PROJECTS)
         setRecentTransactions(DEMO_TRANSACTIONS.slice(0, 8))
+        setWorkGroups(DEMO_WORK_GROUPS)
         setStats({
           projects: DEMO_PROJECTS.length,
           transactions: DEMO_TRANSACTIONS.length,
@@ -51,6 +54,10 @@ export default function DashboardPage() {
       })
 
       setStats({ projects: projectCount || 0, transactions: txCount || 0, totalIncome: income, totalExpense: expense })
+
+      // Load work groups
+      const { data: wgData } = await supabase.from('work_groups').select('*').eq('is_active', true).order('sort_order')
+      setWorkGroups(wgData?.length ? wgData : DEMO_WORK_GROUPS)
 
       // Recent transactions
       const { data: recent } = await supabase.from('transactions')
@@ -73,6 +80,7 @@ export default function DashboardPage() {
       // Supabase offline → fallback to demo
       setProjectSummary(DEMO_PROJECTS)
       setRecentTransactions(DEMO_TRANSACTIONS.slice(0, 8))
+      setWorkGroups(DEMO_WORK_GROUPS)
       setStats({ projects: DEMO_PROJECTS.length, transactions: DEMO_TRANSACTIONS.length, totalIncome: DEMO_TRANSACTIONS.filter(t => t.transaction_type === 'income' || t.transaction_type === 'transfer_in').reduce((s, t) => s + Math.abs(t.amount), 0), totalExpense: DEMO_TRANSACTIONS.filter(t => t.transaction_type === 'expense' || t.transaction_type === 'transfer_out').reduce((s, t) => s + Math.abs(t.amount), 0) })
     }
     setLoading(false)
@@ -80,12 +88,23 @@ export default function DashboardPage() {
 
   const balance = stats.totalIncome - stats.totalExpense
 
+  // Work group filter
+  const filteredProjects = workGroupFilter === 'all' 
+    ? projectSummary 
+    : projectSummary.filter(p => p.work_group === workGroupFilter)
+  const filteredTransactions = workGroupFilter === 'all'
+    ? recentTransactions
+    : recentTransactions.filter(tx => {
+      const p = projectSummary.find(p => p.id === tx.project_id)
+      return p && p.work_group === workGroupFilter
+    })
+
   // ── Smart chart data: group small projects for readability ──
-  const totalBudget = projectSummary.reduce((s, p) => s + p.budget, 0)
+  const totalBudget = filteredProjects.reduce((s, p) => s + p.budget, 0)
   const threshold = totalBudget * 0.03 // Projects < 3% get grouped
 
-  const majorProjects = projectSummary.filter(p => p.budget >= threshold || projectSummary.length <= 5)
-  const minorProjects = projectSummary.filter(p => p.budget < threshold && projectSummary.length > 5)
+  const majorProjects = filteredProjects.filter(p => p.budget >= threshold || filteredProjects.length <= 5)
+  const minorProjects = filteredProjects.filter(p => p.budget < threshold && filteredProjects.length > 5)
   const othersBudget = minorProjects.reduce((s, p) => s + p.budget, 0)
 
   const barData = [
@@ -121,10 +140,10 @@ export default function DashboardPage() {
       {/* ── Stats Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'โครงการทั้งหมด', value: stats.projects, icon: FolderOpen, color: 'bg-purple-500', href: '/projects' },
-          { label: 'รายการทั้งหมด', value: stats.transactions, icon: Calculator, color: 'bg-blue-500', href: '/budget-control' },
-          { label: 'รายรับรวม', value: `฿${stats.totalIncome.toLocaleString()}`, icon: TrendingUp, color: 'bg-green-500', href: null },
-          { label: 'ยอดคงเหลือ', value: `฿${balance.toLocaleString()}`, icon: DollarSign, color: balance >= 0 ? 'bg-emerald-500' : 'bg-red-500', href: null },
+        { label: 'โครงการทั้งหมด', value: filteredProjects.length, icon: FolderOpen, color: 'bg-purple-500', href: '/projects' },
+        { label: 'รายการทั้งหมด', value: filteredTransactions.length, icon: Calculator, color: 'bg-blue-500', href: '/budget-control' },
+        { label: 'รายรับรวม', value: `฿${stats.totalIncome.toLocaleString()}`, icon: TrendingUp, color: 'bg-green-500', href: null },
+        { label: 'ยอดคงเหลือ', value: `฿${balance.toLocaleString()}`, icon: DollarSign, color: balance >= 0 ? 'bg-emerald-500' : 'bg-red-500', href: null },
         ].map((card, i) => {
           const content = (
             <div key={i} className={`bg-white rounded-xl p-4 shadow-sm border border-gray-100 transition ${card.href ? 'hover:shadow-md hover:border-purple-200 cursor-pointer' : ''}`}>
@@ -144,13 +163,13 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Budget Alert — projects over 80% ── */}
-      {projectSummary.filter(p => p.budget > 0 && (p.used / p.budget) > 0.8 && p.status === 'active').length > 0 && (
+      {filteredProjects.filter(p => p.budget > 0 && (p.used / p.budget) > 0.8 && p.status === 'active').length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-amber-800">⚠️ โครงการที่ใช้เกิน 80%</p>
             <div className="flex flex-wrap gap-2 mt-2">
-              {projectSummary.filter(p => p.budget > 0 && (p.used / p.budget) > 0.8 && p.status === 'active').map(p => (
+              {filteredProjects.filter(p => p.budget > 0 && (p.used / p.budget) > 0.8 && p.status === 'active').map(p => (
                 <Link key={p.id} href={`/projects/${p.id}`}
                   className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-200 transition">
                   {p.name.length > 30 ? p.name.slice(0, 30) + '...' : p.name}
@@ -163,10 +182,21 @@ export default function DashboardPage() {
       )}
 
       {/* ── Charts Section ── */}
-      {projectSummary.length > 0 && (
+      {filteredProjects.length > 0 && (
         <>
           {/* Chart controls */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {/* Work Group Filter */}
+            {workGroups.length > 0 && (
+              <select value={workGroupFilter} onChange={e => setWorkGroupFilter(e.target.value)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium bg-white min-w-[120px]">
+                <option value="all">ทุกกลุ่มงาน</option>
+                {workGroups.map(wg => (
+                  <option key={wg.id || wg.name} value={wg.name}>{wg.name}</option>
+                ))}
+              </select>
+            )}
+            <span className="text-gray-300">|</span>
             <span className="text-xs text-gray-500 mr-1">มุมมอง:</span>
             <button onClick={() => setChartMode('absolute')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${chartMode === 'absolute' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
@@ -271,7 +301,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {projectSummary.map(p => {
+                    {filteredProjects.map(p => {
                       const pct = totalBudget > 0 ? (p.budget / totalBudget) * 100 : 0
                       const barColor = pct > 50 ? 'bg-purple-600' : pct > 20 ? 'bg-blue-500' : pct > 5 ? 'bg-green-500' : 'bg-gray-400'
                       return (
@@ -296,13 +326,13 @@ export default function DashboardPage() {
                   </tbody>
                   <tfoot className="bg-gray-50/80 font-semibold">
                     <tr>
-                      <td className="px-5 py-2.5 text-gray-600">รวม {projectSummary.length} โครงการ</td>
+                      <td className="px-5 py-2.5 text-gray-600">รวม {filteredProjects.length} โครงการ</td>
                       <td className="px-3 py-2.5 text-right text-purple-600">฿{totalBudget.toLocaleString()}</td>
                       <td className="px-3 py-2.5 text-right text-red-500">
-                        ฿{projectSummary.reduce((s, p) => s + p.used, 0).toLocaleString()}
+                        ฿{filteredProjects.reduce((s, p) => s + p.used, 0).toLocaleString()}
                       </td>
                       <td className="px-3 py-2.5 text-right text-green-600">
-                        ฿{projectSummary.reduce((s, p) => s + p.remaining, 0).toLocaleString()}
+                        ฿{filteredProjects.reduce((s, p) => s + p.remaining, 0).toLocaleString()}
                       </td>
                       <td className="px-3 py-2.5 text-gray-500 text-xs">100%</td>
                     </tr>
@@ -315,7 +345,7 @@ export default function DashboardPage() {
       )}
 
       {/* Empty state when no data */}
-      {projectSummary.length === 0 && !loading && (
+      {filteredProjects.length === 0 && !loading && (
         <div className="grid lg:grid-cols-2 gap-6 mb-6">
           <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
             <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -334,15 +364,15 @@ export default function DashboardPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold text-gray-800 text-sm">รายการล่าสุด</h3>
-          {recentTransactions.length > 0 && (
-            <span className="text-xs text-gray-400">{recentTransactions.length} รายการ</span>
+          {filteredTransactions.length > 0 && (
+            <span className="text-xs text-gray-400">{filteredTransactions.length} รายการ</span>
           )}
         </div>
         <div className="divide-y divide-gray-50">
-          {recentTransactions.length === 0 ? (
+          {filteredTransactions.length === 0 ? (
             <p className="p-5 text-sm text-gray-400 text-center">ยังไม่มีรายการ</p>
           ) : (
-            recentTransactions.map((tx: any) => {
+            filteredTransactions.map((tx: any) => {
               const isIn = tx.transaction_type === 'income' || tx.transaction_type === 'transfer_in'
               const amount = Math.abs(Number(tx.amount))
               return (
