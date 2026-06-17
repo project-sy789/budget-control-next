@@ -24,18 +24,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [organization, setOrganization] = useState<any>(null)
-  const [darkMode, setDarkMode] = useState(false)
   const [orgMenuOpen, setOrgMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
 
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      const stored = localStorage.getItem('budget-control-dark-mode')
+      if (stored !== null) return stored === 'true'
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+    } catch { return false }
+  })
+
   const [yearLabel, setYearLabel] = useState('ปีงบประมาณ')
 
   useEffect(() => {
-    // Dark mode
+    // Dark mode — sync class + persist
     if (darkMode) document.documentElement.classList.add('dark')
     else document.documentElement.classList.remove('dark')
+    try { localStorage.setItem('budget-control-dark-mode', String(darkMode)) } catch {}
   }, [darkMode])
 
   useEffect(() => {
