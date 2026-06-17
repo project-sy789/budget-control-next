@@ -40,7 +40,7 @@ export default function SystemSettingsPage() {
   async function loadAll() {
     const [{ data: sData }, { data: wgData }] = await Promise.all([
       supabase.from('system_settings').select('*'),
-      supabase.from('work_groups').select('*').order('sort_order')
+      supabase.from('work_groups').select('*').eq('is_active', true).order('sort_order')
     ])
 
     if (sData?.length) {
@@ -215,16 +215,16 @@ export default function SystemSettingsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {workGroups.map(wg => (
               <div key={wg.id}
-                className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 hover:border-purple-200 group transition">
+                className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 transition">
                 <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium ${wg.color}`}>{wg.name}</span>
-                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition">
+                <div className="flex gap-0.5">
                   <button onClick={() => { setEditingWg(wg); setShowWgModal(true) }}
                     className="p-1 hover:bg-gray-100 rounded text-gray-400">
                     <Edit className="w-3 h-3" />
                   </button>
                   <button onClick={async () => {
                     if (confirm(`ลบ "${wg.name}"?`)) {
-                      await supabase.from('work_groups').update({ is_active: false }).eq('id', wg.id)
+                      await supabase.from('work_groups').delete().eq('id', wg.id)
                       loadAll()
                     }
                   }} className="p-1 hover:bg-red-50 rounded text-red-400">
@@ -258,7 +258,16 @@ function WorkGroupModal({ wg, colors, onClose, onSaved }: any) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
-    const data = { name: name.trim(), color }
+    
+    // Get org_id from profile
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase.from('profiles')
+      .select('active_organization_id').eq('id', user.id).single()
+    const orgId = profile?.active_organization_id
+    if (!orgId) return
+
+    const data = { name: name.trim(), color, organization_id: orgId }
     if (wg) {
       await supabase.from('work_groups').update(data).eq('id', wg.id)
     } else {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 import { Plus, Search, Download } from 'lucide-react'
 import { DEMO_FISCAL_YEARS, DEMO_PROJECTS, DEMO_CATEGORIES, DEMO_TRANSACTIONS } from '@/lib/mock-data'
 
@@ -162,7 +163,13 @@ export default function BudgetControlPage() {
                   <td className="px-4 py-3 text-gray-600 text-xs">
                     {new Date(tx.transaction_date).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
                   </td>
-                  <td className="px-4 py-3 font-medium text-gray-800 text-xs">{tx.projects?.name || '-'}</td>
+                  <td className="px-4 py-3 font-medium text-xs">
+                    {tx.projects?.id ? (
+                      <Link href={`/projects/${tx.projects.id}`} className="text-purple-600 hover:underline">
+                        {tx.projects.name || tx.project_id}
+                      </Link>
+                    ) : (tx.projects?.name || tx.project_id || '-')}
+                  </td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{tx.category_types?.category_name || '-'}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs max-w-[150px] truncate">{tx.description || '-'}</td>
                   <td className="px-4 py-3">

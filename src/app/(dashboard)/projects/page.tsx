@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 import {
   Plus, Edit, Trash2, Search, MoreHorizontal, CheckCircle, PauseCircle, PlayCircle,
   X, Lock, Upload, Copy, ChevronDown
@@ -336,7 +337,7 @@ export default function ProjectsPage() {
 
                   {/* Project name */}
                   <td className="px-3 py-3.5">
-                    <div className="flex items-center gap-3">
+                    <Link href={`/projects/${project.id}`} className="flex items-center gap-3 hover:opacity-80 transition">
                       <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold ${
                         project.status === 'active' ? 'bg-green-100 text-green-700' :
                         project.status === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
@@ -345,7 +346,7 @@ export default function ProjectsPage() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="font-medium text-gray-800 truncate max-w-[250px]">{project.name}</p>
+                          <p className="font-medium text-gray-800 truncate max-w-[250px] hover:text-purple-600">{project.name}</p>
                           {isLocked && (
                             <span className="flex-shrink-0" title={`มี ${project.txCount} รายการธุรกรรม — ไม่สามารถแก้ไขได้`}>
                               <Lock className="w-3 h-3 text-amber-500" />
@@ -357,7 +358,7 @@ export default function ProjectsPage() {
                           {isLocked && <span className="text-amber-500 ml-1">• {project.txCount} รายการ</span>}
                         </p>
                       </div>
-                    </div>
+                    </Link>
                   </td>
 
                   <td className="px-2 py-3.5">
@@ -484,7 +485,7 @@ export default function ProjectsPage() {
                   <div className="flex items-center gap-1.5">
                     <input type="checkbox" checked={selected.has(project.id)} onChange={() => toggleSelect(project.id)}
                       className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 flex-shrink-0" />
-                    <h3 className="font-semibold text-gray-800 truncate">{project.name}</h3>
+                    <Link href={`/projects/${project.id}`} className="font-semibold text-gray-800 truncate hover:text-purple-600">{project.name}</Link>
                     {isLocked && <Lock className="w-3 h-3 text-amber-500 flex-shrink-0" />}
                   </div>
                   <p className="text-xs text-gray-500 ml-7">{project.responsible_person}</p>

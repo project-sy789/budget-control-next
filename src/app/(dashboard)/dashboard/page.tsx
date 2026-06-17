@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 import { FolderOpen, Calculator, TrendingUp, DollarSign, Eye, EyeOff, Table2, BarChart3, AlertTriangle, Download } from 'lucide-react'
 import { DEMO_PROJECTS, DEMO_TRANSACTIONS } from '@/lib/mock-data'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LabelList, Legend } from 'recharts'
@@ -103,23 +104,26 @@ export default function DashboardPage() {
       {/* ── Stats Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'โครงการทั้งหมด', value: stats.projects, icon: FolderOpen, color: 'bg-purple-500' },
-          { label: 'รายการทั้งหมด', value: stats.transactions, icon: Calculator, color: 'bg-blue-500' },
-          { label: 'รายรับรวม', value: `฿${stats.totalIncome.toLocaleString()}`, icon: TrendingUp, color: 'bg-green-500' },
-          { label: 'ยอดคงเหลือ', value: `฿${balance.toLocaleString()}`, icon: DollarSign, color: balance >= 0 ? 'bg-emerald-500' : 'bg-red-500' },
-        ].map((card, i) => (
-          <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 ${card.color} rounded-lg flex items-center justify-center`}>
-                <card.icon className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">{card.label}</p>
-                <p className="text-lg font-bold text-gray-800">{card.value}</p>
+          { label: 'โครงการทั้งหมด', value: stats.projects, icon: FolderOpen, color: 'bg-purple-500', href: '/projects' },
+          { label: 'รายการทั้งหมด', value: stats.transactions, icon: Calculator, color: 'bg-blue-500', href: '/budget-control' },
+          { label: 'รายรับรวม', value: `฿${stats.totalIncome.toLocaleString()}`, icon: TrendingUp, color: 'bg-green-500', href: null },
+          { label: 'ยอดคงเหลือ', value: `฿${balance.toLocaleString()}`, icon: DollarSign, color: balance >= 0 ? 'bg-emerald-500' : 'bg-red-500', href: null },
+        ].map((card, i) => {
+          const content = (
+            <div key={i} className={`bg-white rounded-xl p-4 shadow-sm border border-gray-100 transition ${card.href ? 'hover:shadow-md hover:border-purple-200 cursor-pointer' : ''}`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 ${card.color} rounded-lg flex items-center justify-center`}>
+                  <card.icon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">{card.label}</p>
+                  <p className="text-lg font-bold text-gray-800">{card.value}</p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+          return card.href ? <Link key={i} href={card.href}>{content}</Link> : content
+        })}
       </div>
 
       {/* ── Budget Alert — projects over 80% ── */}
@@ -130,10 +134,11 @@ export default function DashboardPage() {
             <p className="text-sm font-medium text-amber-800">⚠️ โครงการที่ใช้เกิน 80%</p>
             <div className="flex flex-wrap gap-2 mt-2">
               {projectSummary.filter(p => p.budget > 0 && (p.used / p.budget) > 0.8 && p.status === 'active').map(p => (
-                <span key={p.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
+                <Link key={p.id} href={`/projects/${p.id}`}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-200 transition">
                   {p.name.length > 30 ? p.name.slice(0, 30) + '...' : p.name}
                   <span className="text-amber-500">({((p.used / p.budget) * 100).toFixed(0)}%)</span>
-                </span>
+                </Link>
               ))}
             </div>
           </div>
@@ -328,7 +333,11 @@ export default function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{tx.description || (isIn ? 'รายรับ' : 'รายจ่าย')}</p>
                     <p className="text-xs text-gray-400 truncate">
-                      {tx.projects?.name || 'ไม่ระบุโครงการ'}
+                      {tx.project_id ? (
+                        <Link href={`/projects/${tx.project_id}`} className="hover:text-purple-600 hover:underline">
+                          {tx.projects?.name || 'ไม่ระบุโครงการ'}
+                        </Link>
+                      ) : (tx.projects?.name || 'ไม่ระบุโครงการ')}
                       {tx.category_types?.category_name && ` • ${tx.category_types.category_name}`}
                       <span className="mx-1">•</span>
                       {new Date(tx.transaction_date).toLocaleDateString('th-TH', { month: 'short', day: 'numeric' })}
