@@ -93,7 +93,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push('/login')
   }
 
-  const isAdmin = profile?.role === 'admin'
+  const isAdmin = isDemo || profile?.role === 'admin'
 
   return (
     <div className="flex h-screen">

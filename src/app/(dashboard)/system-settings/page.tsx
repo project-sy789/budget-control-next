@@ -53,7 +53,11 @@ export default function SystemSettingsPage() {
       DEMO_SETTINGS.forEach(s => { map[s.setting_key] = s.setting_value })
       setSettings(map)
     }
-    if (wgData?.length) setWorkGroups(wgData)
+    if (wgData?.length) {
+      setWorkGroups(wgData)
+    } else {
+      setWorkGroups(DEMO_WORK_GROUPS)
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
