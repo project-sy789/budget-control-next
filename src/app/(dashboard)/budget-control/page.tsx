@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useDemoSandbox } from '@/lib/demo-sandbox'
 import Link from 'next/link'
 import { Plus, Search, Download, Pencil } from 'lucide-react'
 import { DEMO_FISCAL_YEARS, DEMO_PROJECTS, DEMO_CATEGORIES, DEMO_TRANSACTIONS, DEMO_WORK_GROUPS } from '@/lib/mock-data'
@@ -19,13 +20,26 @@ export default function BudgetControlPage() {
   const [loading, setLoading] = useState(true)
   const [isDemo, setIsDemo] = useState(false)
   const supabase = createClient()
+  const sandbox = useDemoSandbox()
 
   useEffect(() => { loadAll() }, [])
 
+  // When sandbox data changes in demo mode, sync to local state
+  useEffect(() => {
+    if (!isDemo) return
+    setTransactions(sandbox.transactions)
+    setProjects(sandbox.projects)
+    setCategories(sandbox.categories)
+    setFiscalYears(sandbox.fiscalYears)
+    setWorkGroups(sandbox.workGroups)
+    setYearLabel(sandbox.settings.year_label_type === 'academic_year' ? 'ปีการศึกษา' : sandbox.settings.year_label_type === 'budget_year' ? 'ปีบัญชี' : 'ปีงบประมาณ')
+    setLoading(false)
+  }, [isDemo, sandbox.transactions, sandbox.projects, sandbox.categories, sandbox.fiscalYears, sandbox.workGroups, sandbox.settings])
+
   async function loadAll() {
-    // Year label
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) setIsDemo(true)
+    if (!session) { setIsDemo(true); return }
+
     const { data: settings } = await supabase.from('system_settings').select('*').eq('setting_key', 'year_label_type')
     if (settings?.[0]) {
       const labelMap: Record<string, string> = { fiscal_year: 'ปีงบประมาณ', academic_year: 'ปีการศึกษา', budget_year: 'ปีบัญชี' }
@@ -34,10 +48,10 @@ export default function BudgetControlPage() {
 
     const [fyData, projData, catData, txData] = await Promise.all([
       supabase.from('fiscal_years').select('*').order('name', { ascending: false }),
-      supabase.from('projects').select('id, name, fiscal_year_id').order('name'),
+      supabase.from('projects').select('id, name, fiscal_year_id, work_group').order('name'),
       supabase.from('category_types').select('*').eq('is_active', true).order('category_name'),
       supabase.from('transactions')
-        .select('*, projects:project_id(id, name, fiscal_year_id), category_types:category_type_id(category_name)')
+        .select('*, projects:project_id(id, name, fiscal_year_id, work_group), category_types:category_type_id(category_name)')
         .order('transaction_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(500)
@@ -46,7 +60,7 @@ export default function BudgetControlPage() {
     setFiscalYears(fyData.data?.length ? fyData.data : DEMO_FISCAL_YEARS)
     setProjects(projData.data?.length ? projData.data : DEMO_PROJECTS)
     setCategories(catData.data?.length ? catData.data : DEMO_CATEGORIES)
-    setWorkGroups(DEMO_WORK_GROUPS) // Work groups come from demo or loaded separately
+    setWorkGroups(DEMO_WORK_GROUPS)
     setTransactions(txData.data?.length ? txData.data : DEMO_TRANSACTIONS)
     setLoading(false)
   }
@@ -74,16 +88,21 @@ export default function BudgetControlPage() {
     return true
   })
 
-  // Compute totals
-  const totalIncome = filtered
-    .filter(tx => tx.transaction_type === 'income' || tx.transaction_type === 'transfer_in')
-    .reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0)
-  const totalExpense = filtered
-    .filter(tx => tx.transaction_type === 'expense' || tx.transaction_type === 'transfer_out')
-    .reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0)
+  const totalIncome = filtered.filter(tx => tx.transaction_type === 'income' || tx.transaction_type === 'transfer_in').reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0)
+  const totalExpense = filtered.filter(tx => tx.transaction_type === 'expense' || tx.transaction_type === 'transfer_out').reduce((sum, tx) => sum + Math.abs(Number(tx.amount)), 0)
 
   const typeLabels: Record<string, string> = {
     income: 'รายรับ', expense: 'รายจ่าย', transfer_in: 'รับโอน', transfer_out: 'โอนออก'
+  }
+
+  function handleAdd() { setEditingTx(null); setShowModal(true) }
+  function handleEdit(tx: any) { setEditingTx(tx); setShowModal(true) }
+
+  async function handleDelete(tx: any) {
+    if (!confirm('ลบรายการนี้?')) return
+    if (isDemo) { sandbox.deleteTransaction(tx.id); return }
+    await supabase.from('transactions').delete().eq('id', tx.id)
+    loadAll()
   }
 
   return (
@@ -91,11 +110,11 @@ export default function BudgetControlPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">ควบคุมงบประมาณ</h1>
         <div className="flex items-center gap-2">
-          <a href="/api/export?type=transactions" 
+          <a href="/api/export?type=transactions"
             className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition">
             <Download className="w-4 h-4" /> ส่งออก
           </a>
-          <button onClick={() => { if (isDemo) return; setEditingTx(null); setShowModal(true) }}
+          <button onClick={handleAdd}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition">
             <Plus className="w-4 h-4" /> เพิ่มรายการ
           </button>
@@ -112,8 +131,7 @@ export default function BudgetControlPage() {
         <select value={filters.project_id} onChange={e => setFilters({ ...filters, project_id: e.target.value })}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-[180px]">
           <option value="all">ทุกโครงการ</option>
-          {projects
-            .filter(p => filters.fiscal_year_id === 'all' || p.fiscal_year_id === filters.fiscal_year_id)
+          {projects.filter(p => filters.fiscal_year_id === 'all' || p.fiscal_year_id === filters.fiscal_year_id)
             .map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         <select value={filters.type} onChange={e => setFilters({ ...filters, type: e.target.value })}
@@ -204,17 +222,12 @@ export default function BudgetControlPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <button onClick={() => { if (isDemo) return; setEditingTx(tx); setShowModal(true) }}
+                      <button onClick={() => handleEdit(tx)}
                         className="p-1 hover:bg-purple-50 rounded text-purple-400 hover:text-purple-600 text-xs" title="แก้ไข">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={async () => {
-                        if (isDemo) return
-                        if (confirm('ลบรายการนี้?')) {
-                          await supabase.from('transactions').delete().eq('id', tx.id)
-                          loadAll()
-                        }
-                      }} className="p-1 hover:bg-red-50 rounded text-red-400 hover:text-red-600 text-xs" title="ลบ">✕</button>
+                      <button onClick={() => handleDelete(tx)}
+                        className="p-1 hover:bg-red-50 rounded text-red-400 hover:text-red-600 text-xs" title="ลบ">✕</button>
                     </div>
                   </td>
                 </tr>
@@ -237,15 +250,16 @@ export default function BudgetControlPage() {
           yearLabel={yearLabel}
           transaction={editingTx}
           isDemo={isDemo}
+          sandbox={sandbox}
           onClose={() => { setShowModal(false); setEditingTx(null) }}
-          onSaved={() => { setShowModal(false); setEditingTx(null); loadAll() }}
+          onSaved={() => { setShowModal(false); setEditingTx(null); if (!isDemo) loadAll() }}
         />
       )}
     </div>
   )
 }
 
-function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, transaction, isDemo, onClose, onSaved }: any) {
+function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, transaction, isDemo, sandbox, onClose, onSaved }: any) {
   const isEdit = !!transaction
   const [projectId, setProjectId] = useState(transaction?.project_id || '')
   const [categoryTypeId, setCategoryTypeId] = useState(transaction?.category_type_id || '')
@@ -258,7 +272,6 @@ function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, tra
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
 
-  // Auto-select fiscal year
   useEffect(() => {
     const active = fiscalYears.find((fy: any) => fy.is_active)
     if (active) setFilterFyId(active.id)
@@ -270,9 +283,9 @@ function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, tra
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (isDemo) { onSaved(); return }
     if (!projectId) { alert('กรุณาเลือกโครงการ'); return }
     setSaving(true)
+
     const data = {
       project_id: projectId,
       category_type_id: categoryTypeId || null,
@@ -282,6 +295,24 @@ function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, tra
       transaction_date: date,
       reference_number: refNumber
     }
+
+    if (isDemo && sandbox) {
+      if (isEdit) {
+        sandbox.updateTransaction(transaction.id, data)
+      } else {
+        // Find project info for display
+        const proj = projects.find((p: any) => p.id === projectId)
+        const cat = categories.find((c: any) => c.id === categoryTypeId)
+        sandbox.addTransaction({
+          ...data,
+          projects: proj ? { id: proj.id, name: proj.name, fiscal_year_id: proj.fiscal_year_id, work_group: proj.work_group } : null,
+          category_types: cat ? { category_name: cat.category_name } : null,
+        })
+      }
+      onSaved()
+      return
+    }
+
     let error
     if (isEdit) {
       const res = await supabase.from('transactions').update(data).eq('id', transaction.id)
@@ -300,7 +331,6 @@ function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, tra
       <div className="bg-white rounded-xl w-full max-w-md p-6">
         <h2 className="text-lg font-bold mb-4">{isEdit ? 'แก้ไขรายการ' : 'เพิ่มรายการ'}</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Filter by fiscal year first */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">กรองโครงการตาม{yearLabel}</label>
             <select value={filterFyId} onChange={e => setFilterFyId(e.target.value)}
@@ -309,7 +339,6 @@ function AddTransactionModal({ projects, categories, fiscalYears, yearLabel, tra
               {fiscalYears.map((fy: any) => <option key={fy.id} value={fy.id}>{fy.name} {fy.is_active ? '(ปัจจุบัน)' : ''}</option>)}
             </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">โครงการ <span className="text-red-500">*</span></label>
             <select value={projectId} onChange={e => setProjectId(e.target.value)} required

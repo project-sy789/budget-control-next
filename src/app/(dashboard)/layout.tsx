@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { DemoSandboxProvider } from '@/lib/demo-sandbox'
 import Link from 'next/link'
 import {
   LayoutDashboard, FolderOpen, Calculator, BarChart3, ArrowLeftRight,
@@ -229,7 +230,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Page Content */}
         <div className="p-4 lg:p-6">
-          {children}
+          {isDemo ? (
+            <DemoSandboxProvider>{children}</DemoSandboxProvider>
+          ) : (
+            children
+          )}
         </div>
       </main>
       <CommandPalette />
