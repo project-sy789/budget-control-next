@@ -47,7 +47,7 @@ export default function ProjectsPage() {
       supabase.from('category_types').select('*').eq('is_active', true).order('category_name'),
       supabase.from('work_groups').select('*').eq('is_active', true).order('sort_order'),
       supabase.from('projects')
-        .select('*, profiles:created_by(display_name), fiscal_years:fiscal_year_id(id, name)')
+        .select('*, fiscal_years:fiscal_year_id(id, name)')
         .order('created_at', { ascending: false })
     ])
 

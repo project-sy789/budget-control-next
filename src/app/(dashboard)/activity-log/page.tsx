@@ -14,10 +14,16 @@ export default function ActivityLogPage() {
     async function load() {
       try {
         const { data } = await supabase.from('transactions')
-          .select('*, projects:project_id(name), profiles:created_by(display_name), category_types:category_type_id(category_name)')
+          .select('*, projects:project_id(name), category_types:category_type_id(category_name)')
           .order('created_at', { ascending: false })
           .limit(100)
-        setActivities(data?.length ? data : [])
+        
+        // Note: profiles RLS has recursion bug — display_name will be null until DB fix
+        const enriched = (data || []).map(t => ({
+          ...t,
+          profiles: { display_name: null }
+        }))
+        setActivities(enriched.length ? enriched : [])
       } catch {
         setActivities(DEMO_TRANSACTIONS)
       }
