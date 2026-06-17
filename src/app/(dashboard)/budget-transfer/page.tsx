@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeftRight, AlertTriangle } from 'lucide-react'
+import { DEMO_PROJECTS, DEMO_CATEGORIES, DEMO_FISCAL_YEARS } from '@/lib/mock-data'
 
 export default function BudgetTransferPage() {
   const [projects, setProjects] = useState<any[]>([])
@@ -25,12 +26,23 @@ export default function BudgetTransferPage() {
 
   // Balance check
   const [sourceBalance, setSourceBalance] = useState<number | null>(null)
+  const [isDemo, setIsDemo] = useState(false)
 
   const supabase = createClient()
 
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setIsDemo(true)
+      setFiscalYears(DEMO_FISCAL_YEARS)
+      setProjects(DEMO_PROJECTS)
+      setCategories(DEMO_CATEGORIES)
+      setTransfers([])
+      setFilterFyId('fy-1')
+      return
+    }
     const { data: settings } = await supabase.from('system_settings').select('*').eq('setting_key', 'year_label_type')
     if (settings?.[0]) {
       const m: Record<string, string> = { fiscal_year: 'ปีงบประมาณ', academic_year: 'ปีการศึกษา', budget_year: 'ปีบัญชี' }
@@ -45,14 +57,15 @@ export default function BudgetTransferPage() {
         .in('transaction_type', ['transfer_in', 'transfer_out']).order('created_at', { ascending: false }).limit(50)
     ])
 
-    setFiscalYears(fyData.data || [])
-    setProjects(projData.data || [])
-    setCategories(catData.data || [])
+    setFiscalYears(fyData.data?.length ? fyData.data : DEMO_FISCAL_YEARS)
+    setProjects(projData.data?.length ? projData.data : DEMO_PROJECTS)
+    setCategories(catData.data?.length ? catData.data : DEMO_CATEGORIES)
     setTransfers(txData.data || [])
 
     // Set active fiscal year
     const active = fyData.data?.find(fy => fy.is_active)
     if (active) setFilterFyId(active.id)
+    else if (DEMO_FISCAL_YEARS.length) setFilterFyId('fy-1')
   }
 
   // Filter projects by fiscal year
@@ -61,7 +74,7 @@ export default function BudgetTransferPage() {
   // Check source balance when project/category changes
   useEffect(() => {
     async function checkBalance() {
-      if (!fromProjectId) { setSourceBalance(null); return }
+      if (isDemo || !fromProjectId) { setSourceBalance(null); return }
       const { data } = await supabase.from('projects').select('budget').eq('id', fromProjectId).single()
       const budget = Number(data?.budget || 0)
       const { data: tx } = await supabase.from('transactions').select('amount, transaction_type').eq('project_id', fromProjectId)
@@ -81,6 +94,8 @@ export default function BudgetTransferPage() {
   async function handleTransfer(e: React.FormEvent) {
     e.preventDefault()
     setMessage(null)
+
+    if (isDemo) { setMessage({ type: 'error', text: 'โหมดตัวอย่าง — ไม่สามารถทำรายการจริงได้' }); return }
 
     if (!fromProjectId || !toProjectId) { setMessage({ type: 'error', text: 'กรุณาเลือกโครงการต้นทางและปลายทาง' }); return }
     if (fromProjectId === toProjectId) { setMessage({ type: 'error', text: 'ไม่สามารถโอนให้โครงการเดียวกันได้' }); return }

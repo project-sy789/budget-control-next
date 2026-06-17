@@ -13,6 +13,12 @@ export default function ActivityLogPage() {
   useEffect(() => {
     async function load() {
       try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          setActivities(DEMO_TRANSACTIONS)
+          setLoading(false)
+          return
+        }
         const { data } = await supabase.from('transactions')
           .select('*, projects:project_id(name), category_types:category_type_id(category_name)')
           .order('created_at', { ascending: false })
@@ -23,7 +29,7 @@ export default function ActivityLogPage() {
           ...t,
           profiles: { display_name: null }
         }))
-        setActivities(enriched.length ? enriched : [])
+        setActivities(enriched.length ? enriched : DEMO_TRANSACTIONS)
       } catch {
         setActivities(DEMO_TRANSACTIONS)
       }

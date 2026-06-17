@@ -2,11 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { DEMO_FISCAL_YEARS, DEMO_PROJECTS } from '@/lib/mock-data'
+import { DEMO_FISCAL_YEARS, DEMO_PROJECTS, DEMO_TRANSACTIONS } from '@/lib/mock-data'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts'
 import { TrendingDown, TrendingUp, Wallet, FolderOpen, BarChart3, Download } from 'lucide-react'
 
 const COLORS = ['#8b5cf6', '#ef4444']
+
+function enrichDemoProjects(fiscalYearId: string) {
+  let projects = DEMO_PROJECTS
+  if (fiscalYearId !== 'all') projects = projects.filter(p => p.fiscal_year_id === fiscalYearId)
+  return projects.map(p => {
+    const txs = DEMO_TRANSACTIONS.filter(t => t.project_id === p.id)
+    let expense = 0, income = 0
+    txs.forEach(t => {
+      if (t.transaction_type === 'income' || t.transaction_type === 'transfer_in') income += Math.abs(t.amount)
+      else expense += Math.abs(t.amount)
+    })
+    return { ...p, budget: Number(p.budget), income, expense, remaining: Number(p.budget) - expense + income, used: Math.max(0, expense - income) }
+  })
+}
 
 export default function BudgetSummaryPage() {
   const [projects, setProjects] = useState<any[]>([])
@@ -15,10 +29,13 @@ export default function BudgetSummaryPage() {
   const [yearLabel, setYearLabel] = useState('ปีงบประมาณ')
   const [chartMode, setChartMode] = useState<'absolute' | 'percent'>('absolute')
   const [loading, setLoading] = useState(true)
+  const [isDemo, setIsDemo] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
     async function init() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { setIsDemo(true); setLoading(false); return }
       const { data: settings } = await supabase.from('system_settings').select('*').eq('setting_key', 'year_label_type')
       if (settings?.[0]) {
         const m: Record<string, string> = { fiscal_year: 'ปีงบประมาณ', academic_year: 'ปีการศึกษา', budget_year: 'ปีบัญชี' }
@@ -29,6 +46,9 @@ export default function BudgetSummaryPage() {
         setFiscalYears(fyData)
         const active = fyData.find((fy: any) => fy.is_active)
         if (active) setFiscalYearId(active.id)
+      } else {
+        setFiscalYears(DEMO_FISCAL_YEARS)
+        setFiscalYearId('fy-1')
       }
       setLoading(false)
     }
@@ -36,6 +56,12 @@ export default function BudgetSummaryPage() {
   }, [])
 
   useEffect(() => {
+    if (isDemo) {
+      setFiscalYears(DEMO_FISCAL_YEARS)
+      if (fiscalYearId === 'all') setFiscalYearId('fy-1')
+      setProjects(enrichDemoProjects(fiscalYearId))
+      return
+    }
     async function load() {
       setLoading(true)
       let query = supabase.from('projects').select('*, fiscal_years:fiscal_year_id(name)').order('budget', { ascending: false })
@@ -54,12 +80,12 @@ export default function BudgetSummaryPage() {
         }))
         setProjects(enriched)
       } else {
-        setProjects([])
+        setProjects(fiscalYearId !== 'all' ? enrichDemoProjects(fiscalYearId) : [])
       }
       setLoading(false)
     }
     if (fiscalYearId) load()
-  }, [fiscalYearId])
+  }, [fiscalYearId, isDemo])
 
   const totalBudget = projects.reduce((s, p) => s + p.budget, 0)
   const totalUsed = projects.reduce((s, p) => s + p.used, 0)

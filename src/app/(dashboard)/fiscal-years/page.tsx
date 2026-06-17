@@ -3,21 +3,30 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Edit, Trash2, Star } from 'lucide-react'
+import { DEMO_FISCAL_YEARS } from '@/lib/mock-data'
 
 export default function FiscalYearsPage() {
   const [years, setYears] = useState<any[]>([])
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const [isDemo, setIsDemo] = useState(false)
   const supabase = createClient()
 
   useEffect(() => { load() }, [])
 
   async function load() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setIsDemo(true)
+      setYears(DEMO_FISCAL_YEARS)
+      return
+    }
     const { data } = await supabase.from('fiscal_years').select('*').order('name', { ascending: false })
-    setYears(data || [])
+    setYears(data?.length ? data : DEMO_FISCAL_YEARS)
   }
 
   async function setActive(id: string) {
+    if (isDemo) return
     await supabase.from('fiscal_years').update({ is_active: false }).neq('id', id)
     await supabase.from('fiscal_years').update({ is_active: true }).eq('id', id)
     load()
@@ -53,7 +62,7 @@ export default function FiscalYearsPage() {
               <button onClick={() => { setEditing(year); setShowModal(true) }} className="p-1 hover:bg-gray-100 rounded text-gray-500">
                 <Edit className="w-3.5 h-3.5" />
               </button>
-              <button onClick={async () => { if (confirm('ลบปีนี้?')) { await supabase.from('fiscal_years').delete().eq('id', year.id); load() } }} className="p-1 hover:bg-gray-100 rounded text-red-400">
+              <button onClick={async () => { if (isDemo) return; if (confirm('ลบปีนี้?')) { await supabase.from('fiscal_years').delete().eq('id', year.id); load() } }} className="p-1 hover:bg-gray-100 rounded text-red-400">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -61,12 +70,12 @@ export default function FiscalYearsPage() {
         ))}
       </div>
 
-      {showModal && <FiscalYearModal year={editing} onClose={() => setShowModal(false)} onSaved={() => { setShowModal(false); load() }} />}
+      {showModal && <FiscalYearModal year={editing} onClose={() => setShowModal(false)} onSaved={() => { setShowModal(false); load() }} isDemo={isDemo} />}
     </div>
   )
 }
 
-function FiscalYearModal({ year, onClose, onSaved }: any) {
+function FiscalYearModal({ year, onClose, onSaved, isDemo }: any) {
   const [name, setName] = useState(year?.name || '')
   const [startDate, setStartDate] = useState(year?.start_date || '')
   const [endDate, setEndDate] = useState(year?.end_date || '')
@@ -74,6 +83,7 @@ function FiscalYearModal({ year, onClose, onSaved }: any) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isDemo) { onSaved(); return }
     const data = { name, start_date: startDate, end_date: endDate }
     if (year) {
       await supabase.from('fiscal_years').update(data).eq('id', year.id)

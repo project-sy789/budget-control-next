@@ -3,18 +3,26 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Edit, Trash2, Tags } from 'lucide-react'
+import { DEMO_CATEGORIES } from '@/lib/mock-data'
 
 export default function CategoryManagementPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const [isDemo, setIsDemo] = useState(false)
   const supabase = createClient()
 
   useEffect(() => { load() }, [])
 
   async function load() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setIsDemo(true)
+      setCategories(DEMO_CATEGORIES)
+      return
+    }
     const { data } = await supabase.from('category_types').select('*').order('category_name')
-    setCategories(data || [])
+    setCategories(data?.length ? data : DEMO_CATEGORIES)
   }
 
   return (
@@ -68,11 +76,11 @@ export default function CategoryManagementPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => { setEditing(cat); setShowModal(true) }}
+                        <button onClick={() => { if (isDemo) return; setEditing(cat); setShowModal(true) }}
                           className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-purple-600">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button onClick={async () => { if (confirm('ปิดการใช้งานหมวดหมู่นี้?')) { await supabase.from('category_types').update({ is_active: false }).eq('id', cat.id); load() } }}
+                        <button onClick={async () => { if (isDemo) return; if (confirm('ปิดการใช้งานหมวดหมู่นี้?')) { await supabase.from('category_types').update({ is_active: false }).eq('id', cat.id); load() } }}
                           className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-red-600">
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -86,12 +94,12 @@ export default function CategoryManagementPage() {
         </div>
       )}
 
-      {showModal && <CategoryModal category={editing} onClose={() => setShowModal(false)} onSaved={() => { setShowModal(false); load() }} />}
+      {showModal && <CategoryModal category={editing} onClose={() => setShowModal(false)} onSaved={() => { setShowModal(false); load() }} isDemo={isDemo} />}
     </div>
   )
 }
 
-function CategoryModal({ category, onClose, onSaved }: any) {
+function CategoryModal({ category, onClose, onSaved, isDemo }: any) {
   const [key, setKey] = useState(category?.category_key || '')
   const [name, setName] = useState(category?.category_name || '')
   const [desc, setDesc] = useState(category?.description || '')
@@ -100,6 +108,7 @@ function CategoryModal({ category, onClose, onSaved }: any) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isDemo) { onSaved(); return }
     const data = { category_key: key.toUpperCase().replace(/[^A-Z0-9]/g, '_'), category_name: name, description: desc, is_active: active }
     if (category) {
       await supabase.from('category_types').update(data).eq('id', category.id)
