@@ -215,6 +215,29 @@ CREATE INDEX idx_activity_log_org ON public.activity_log(organization_id);
 CREATE INDEX idx_invitations_org ON public.invitations(organization_id);
 
 -- ═════════════════════════════════════
+-- AUTO-CREATE PROFILE on signup
+-- ═════════════════════════════════════
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, display_name, role, approved)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
+    'admin',
+    true
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ═════════════════════════════════════
 -- HELPER: Get current user's organization_id
 -- ═════════════════════════════════════
 CREATE OR REPLACE FUNCTION public.get_user_org_id()
