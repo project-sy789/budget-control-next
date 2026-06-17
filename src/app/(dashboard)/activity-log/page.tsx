@@ -52,7 +52,7 @@ export default function ActivityLogPage() {
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                 a.transaction_type === 'income' || a.transaction_type === 'transfer_in' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
               }`}>
-                {(typeIcons[a.transaction_type] && <typeIcons[a.transaction_type] className="w-5 h-5" />) || <Calculator className="w-5 h-5" />}
+                <Calculator className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-800 truncate">{a.description || typeLabels[a.transaction_type]}</p>
