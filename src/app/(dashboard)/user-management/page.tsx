@@ -25,8 +25,17 @@ export default function UserManagementPage() {
 
   async function loadUsers() {
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
-      setUsers(data?.length ? data : [])
+      
+      // Unauthenticated or no data → demo mode
+      if (!session || !data?.length) {
+        setUsers(DEMO_PROFILES)
+        setLoading(false)
+        return
+      }
+      
+      setUsers(data)
     } catch {
       setUsers(DEMO_PROFILES)
     }

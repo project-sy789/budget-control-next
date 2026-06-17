@@ -22,10 +22,27 @@ export default function DashboardPage() {
 
   async function loadData() {
     try {
+      // Check if authenticated
+      const { data: { session } } = await supabase.auth.getSession()
+      
       // Stats
       const { count: projectCount } = await supabase.from('projects').select('*', { count: 'exact', head: true })
       const { count: txCount } = await supabase.from('transactions').select('*', { count: 'exact', head: true })
       const { data: txData } = await supabase.from('transactions').select('amount, transaction_type')
+
+      // If not authenticated or no data → demo mode
+      if (!session || projectCount === null) {
+        setProjectSummary(DEMO_PROJECTS)
+        setRecentTransactions(DEMO_TRANSACTIONS.slice(0, 8))
+        setStats({
+          projects: DEMO_PROJECTS.length,
+          transactions: DEMO_TRANSACTIONS.length,
+          totalIncome: DEMO_TRANSACTIONS.filter(t => t.transaction_type === 'income' || t.transaction_type === 'transfer_in').reduce((s, t) => s + Math.abs(t.amount), 0),
+          totalExpense: DEMO_TRANSACTIONS.filter(t => t.transaction_type === 'expense' || t.transaction_type === 'transfer_out').reduce((s, t) => s + Math.abs(t.amount), 0)
+        })
+        setLoading(false)
+        return
+      }
 
       let income = 0, expense = 0
       txData?.forEach(t => {
