@@ -9,9 +9,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6']
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ projects: DEMO_PROJECTS.length, transactions: DEMO_TRANSACTIONS.length, totalIncome: DEMO_TRANSACTIONS.filter(t => t.transaction_type === 'income' || t.transaction_type === 'transfer_in').reduce((s, t) => s + Math.abs(t.amount), 0), totalExpense: DEMO_TRANSACTIONS.filter(t => t.transaction_type === 'expense' || t.transaction_type === 'transfer_out').reduce((s, t) => s + Math.abs(t.amount), 0) })
-  const [recentTransactions, setRecentTransactions] = useState<any[]>(DEMO_TRANSACTIONS.slice(0, 8))
-  const [projectSummary, setProjectSummary] = useState<any[]>(DEMO_PROJECTS)
+  const [stats, setStats] = useState({ projects: 0, transactions: 0, totalIncome: 0, totalExpense: 0 })
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([])
+  const [projectSummary, setProjectSummary] = useState<any[]>([])
   const [chartMode, setChartMode] = useState<'absolute' | 'percent'>('absolute')
   const [showTable, setShowTable] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -51,9 +51,8 @@ export default function DashboardPage() {
         return { ...p, budget: Number(p.budget), used: exp, remaining: Number(p.budget) - exp }
       }))
       setProjectSummary(enriched)
-    } catch (e) {}
-    // Fallback to mock if empty
-    if (!projectSummary.length && !loading) {
+    } catch (e) {
+      // Supabase offline → fallback to demo
       setProjectSummary(DEMO_PROJECTS)
       setRecentTransactions(DEMO_TRANSACTIONS.slice(0, 8))
       setStats({ projects: DEMO_PROJECTS.length, transactions: DEMO_TRANSACTIONS.length, totalIncome: DEMO_TRANSACTIONS.filter(t => t.transaction_type === 'income' || t.transaction_type === 'transfer_in').reduce((s, t) => s + Math.abs(t.amount), 0), totalExpense: DEMO_TRANSACTIONS.filter(t => t.transaction_type === 'expense' || t.transaction_type === 'transfer_out').reduce((s, t) => s + Math.abs(t.amount), 0) })

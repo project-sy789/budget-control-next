@@ -39,24 +39,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [darkMode])
 
   useEffect(() => {
-    // DEMO MODE: skip auth check for visual inspection
-    const demoProfile = { display_name: 'ผู้ดูแลระบบ', role: 'admin', email: 'admin@sapyai.com', department: 'IT', position: 'Admin', active_organization_id: '00000000-0000-0000-0000-000000000001' }
-    setProfile(demoProfile)
-    
-    // Load organization info
-    if (demoProfile.active_organization_id) {
-      supabase.from('organizations').select('*').eq('id', demoProfile.active_organization_id).single().then(({ data }) => {
-        if (data) setOrganization(data)
+    // Load real auth user + profile
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Load profile from DB
+      const { data: profileData } = await supabase.from('profiles')
+        .select('*').eq('id', user.id).single()
+
+      if (profileData) {
+        setProfile(profileData)
+
+        // Load organization info
+        if (profileData.active_organization_id) {
+          supabase.from('organizations').select('*')
+            .eq('id', profileData.active_organization_id).single()
+            .then(({ data }) => { if (data) setOrganization(data) })
+        }
+      }
+
+      // Load year label from settings
+      supabase.from('system_settings').select('*').eq('setting_key', 'year_label_type').then(({ data }) => {
+        if (data?.[0]) {
+          const m: Record<string, string> = { fiscal_year: 'ปีงบประมาณ', academic_year: 'ปีการศึกษา', budget_year: 'ปีบัญชี' }
+          setYearLabel(m[data[0].setting_value] || 'ปีงบประมาณ')
+        }
       })
     }
-    
-    // Load year label from settings
-    supabase.from('system_settings').select('*').eq('setting_key', 'year_label_type').then(({ data }) => {
-      if (data?.[0]) {
-        const m: Record<string, string> = { fiscal_year: 'ปีงบประมาณ', academic_year: 'ปีการศึกษา', budget_year: 'ปีบัญชี' }
-        setYearLabel(m[data[0].setting_value] || 'ปีงบประมาณ')
-      }
-    })
+    init()
   }, [])
 
   const handleLogout = async () => {
@@ -86,7 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {organization?.name || 'ระบบควบคุมงบประมาณ'}
                 </h2>
                 <div className="flex items-center gap-1 text-xs text-purple-200">
-                  <span className="truncate">{organization?.slug || 'demo'}</span>
+                  <span className="truncate">{organization?.name || 'กำลังโหลด...'}</span>
                   <ChevronDown className="w-3 h-3 flex-shrink-0" />
                 </div>
               </div>

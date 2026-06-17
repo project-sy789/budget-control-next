@@ -6,10 +6,10 @@ import { Plus, Search, Download } from 'lucide-react'
 import { DEMO_FISCAL_YEARS, DEMO_PROJECTS, DEMO_CATEGORIES, DEMO_TRANSACTIONS } from '@/lib/mock-data'
 
 export default function BudgetControlPage() {
-  const [transactions, setTransactions] = useState<any[]>(DEMO_TRANSACTIONS)
-  const [projects, setProjects] = useState<any[]>(DEMO_PROJECTS)
-  const [categories, setCategories] = useState<any[]>(DEMO_CATEGORIES)
-  const [fiscalYears, setFiscalYears] = useState<any[]>(DEMO_FISCAL_YEARS)
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [projects, setProjects] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [fiscalYears, setFiscalYears] = useState<any[]>([])
   const [yearLabel, setYearLabel] = useState('ปีงบประมาณ')
   const [filters, setFilters] = useState({ fiscal_year_id: 'all', project_id: 'all', type: 'all', search: '' })
   const [showModal, setShowModal] = useState(false)

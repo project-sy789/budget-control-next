@@ -9,10 +9,10 @@ import {
 import { DEMO_FISCAL_YEARS, DEMO_CATEGORIES, DEMO_WORK_GROUPS, DEMO_PROJECTS } from '@/lib/mock-data'
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<any[]>(DEMO_PROJECTS)
-  const [fiscalYears, setFiscalYears] = useState<any[]>(DEMO_FISCAL_YEARS)
-  const [categories, setCategories] = useState<any[]>(DEMO_CATEGORIES)
-  const [workGroups, setWorkGroups] = useState<any[]>(DEMO_WORK_GROUPS)
+  const [projects, setProjects] = useState<any[]>([])
+  const [fiscalYears, setFiscalYears] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [workGroups, setWorkGroups] = useState<any[]>([])
   const [yearLabel, setYearLabel] = useState('ปีงบประมาณ')
   const [activeFyId, setActiveFyId] = useState<string>('active')
   const [search, setSearch] = useState('')

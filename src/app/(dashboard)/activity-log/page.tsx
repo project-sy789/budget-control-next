@@ -6,17 +6,21 @@ import { Clock, Calculator, FileText, ArrowLeftRight } from 'lucide-react'
 import { DEMO_TRANSACTIONS } from '@/lib/mock-data'
 
 export default function ActivityLogPage() {
-  const [activities, setActivities] = useState<any[]>(DEMO_TRANSACTIONS)
+  const [activities, setActivities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase.from('transactions')
-        .select('*, projects:project_id(name), profiles:created_by(display_name), category_types:category_type_id(category_name)')
-        .order('created_at', { ascending: false })
-        .limit(100)
-      setActivities(data?.length ? data : DEMO_TRANSACTIONS)
+      try {
+        const { data } = await supabase.from('transactions')
+          .select('*, projects:project_id(name), profiles:created_by(display_name), category_types:category_type_id(category_name)')
+          .order('created_at', { ascending: false })
+          .limit(100)
+        setActivities(data?.length ? data : [])
+      } catch {
+        setActivities(DEMO_TRANSACTIONS)
+      }
       setLoading(false)
     }
     load()
@@ -25,42 +29,46 @@ export default function ActivityLogPage() {
   const typeLabels: Record<string, string> = { income: 'เพิ่มรายรับ', expense: 'เพิ่มรายจ่าย', transfer_in: 'รับโอน', transfer_out: 'โอนออก' }
   const typeIcons: Record<string, any> = { income: Calculator, expense: Calculator, transfer_in: ArrowLeftRight, transfer_out: ArrowLeftRight }
 
+  const formatDate = (d: string) => new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+  const formatAmount = (a: number) => new Intl.NumberFormat('th-TH').format(a)
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
         <Clock className="w-6 h-6 text-purple-600" /> บันทึกกิจกรรม
       </h1>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="divide-y divide-gray-50">
-          {activities.map((a) => {
-            const Icon = typeIcons[a.transaction_type] || FileText
-            return (
-              <div key={a.id} className="px-5 py-3 flex items-start gap-3 hover:bg-gray-50 transition">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  a.transaction_type === 'income' || a.transaction_type === 'transfer_in' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                }`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-800">
-                    <span className="font-medium">{a.profiles?.display_name || 'ไม่ระบุ'}</span>
-                    {' '}{typeLabels[a.transaction_type] || a.transaction_type}
-                    {' '}฿{Math.abs(Number(a.amount)).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {a.projects?.name} {a.category_types?.category_name && `• ${a.category_types.category_name}`}
-                    {' • '}{new Date(a.created_at).toLocaleString('th-TH')}
-                  </p>
-                </div>
-              </div>
-            )
-          })}
-          {activities.length === 0 && (
-            <p className="py-12 text-center text-gray-400">{loading ? 'กำลังโหลด...' : 'ยังไม่มีกิจกรรม'}</p>
-          )}
+      {loading ? (
+        <div className="text-center py-12 text-gray-400">กำลังโหลด...</div>
+      ) : activities.length === 0 ? (
+        <div className="text-center py-12 text-gray-400">
+          <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p>ยังไม่มีกิจกรรม</p>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-2">
+          {activities.map((a: any, i: number) => (
+            <div key={a.id || i} className="bg-white border border-gray-100 rounded-xl p-4 flex items-center gap-4 hover:shadow-sm transition">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                a.transaction_type === 'income' || a.transaction_type === 'transfer_in' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+              }`}>
+                {(typeIcons[a.transaction_type] && <typeIcons[a.transaction_type] className="w-5 h-5" />) || <Calculator className="w-5 h-5" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 truncate">{a.description || typeLabels[a.transaction_type]}</p>
+                <p className="text-xs text-gray-500">
+                  {a.projects?.name || '—'} · {a.profiles?.display_name || '—'} · {formatDate(a.created_at)}
+                </p>
+              </div>
+              <div className={`text-sm font-semibold flex-shrink-0 ${
+                a.transaction_type === 'income' || a.transaction_type === 'transfer_in' ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {a.transaction_type === 'income' || a.transaction_type === 'transfer_in' ? '+' : '-'}฿{formatAmount(Number(a.amount))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

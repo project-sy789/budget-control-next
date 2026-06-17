@@ -7,7 +7,7 @@ import { Check, X, Trash2, UserCheck, KeyRound, Mail, Send, Copy, Users } from '
 import { DEMO_PROFILES } from '@/lib/mock-data'
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<any[]>(DEMO_PROFILES)
+  const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [resetModal, setResetModal] = useState<{ userId: string; displayName: string } | null>(null)
   const [newPassword, setNewPassword] = useState('')
@@ -24,8 +24,12 @@ export default function UserManagementPage() {
   useEffect(() => { loadUsers() }, [])
 
   async function loadUsers() {
-    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
-    setUsers(data?.length ? data : DEMO_PROFILES)
+    try {
+      const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+      setUsers(data?.length ? data : [])
+    } catch {
+      setUsers(DEMO_PROFILES)
+    }
     setLoading(false)
   }
 

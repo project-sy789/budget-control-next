@@ -27,7 +27,7 @@ const THEME_COLORS = [
 
 export default function SystemSettingsPage() {
   const [settings, setSettings] = useState<any>({})
-  const [workGroups, setWorkGroups] = useState<any[]>(DEMO_WORK_GROUPS)
+  const [workGroups, setWorkGroups] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [showWgModal, setShowWgModal] = useState(false)

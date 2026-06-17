@@ -25,9 +25,11 @@ export default function BudgetSummaryPage() {
         setYearLabel(m[settings[0].setting_value] || 'ปีงบประมาณ')
       }
       const { data: fyData } = await supabase.from('fiscal_years').select('*').order('name', { ascending: false })
-      setFiscalYears(fyData?.length ? fyData : DEMO_FISCAL_YEARS)
-      const active = fyData?.find((fy: any) => fy.is_active)
-      if (active) setFiscalYearId(active.id)
+      if (fyData?.length) {
+        setFiscalYears(fyData)
+        const active = fyData.find((fy: any) => fy.is_active)
+        if (active) setFiscalYearId(active.id)
+      }
       setLoading(false)
     }
     init()
@@ -52,9 +54,7 @@ export default function BudgetSummaryPage() {
         }))
         setProjects(enriched)
       } else {
-        // Mock fallback
-        const mock = DEMO_PROJECTS.filter(p => fiscalYearId === 'all' || p.fiscal_year_id === fiscalYearId)
-        setProjects(mock)
+        setProjects([])
       }
       setLoading(false)
     }
