@@ -322,6 +322,97 @@ export default function AdminPage() {
             {!loading && filteredUsers.length === 0 && <div className="py-12 text-center"><Users className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">ไม่พบผู้ใช้</p></div>}
           </div>
         )}
+
+        {/* ── ANNOUNCEMENTS TAB ── */}
+        {tab === 'announcements' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-purple-600" /> สร้างประกาศใหม่
+              </h2>
+              {aMsg && (
+                <div className={`mb-3 px-4 py-2.5 rounded-xl text-sm ${aMsg.startsWith('✅') ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-600'}`}>
+                  {aMsg}
+                </div>
+              )}
+              <div className="space-y-3">
+                <input value={aTitle} onChange={e => setATitle(e.target.value)}
+                  placeholder="หัวข้อประกาศ" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-200 outline-none" />
+                <textarea value={aContent} onChange={e => setAContent(e.target.value)} rows={3}
+                  placeholder="เนื้อหาประกาศ..." className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-200 outline-none" />
+                <div className="flex items-center gap-3">
+                  <select value={aType} onChange={e => setAType(e.target.value)}
+                    className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white">
+                    <option value="info">📢 ข้อมูลทั่วไป (ฟ้า)</option>
+                    <option value="warning">⚠️ แจ้งเตือน (เหลือง)</option>
+                    <option value="success">✅ สำเร็จ (เขียว)</option>
+                    <option value="error">🚫 สำคัญ (แดง)</option>
+                  </select>
+                  <button onClick={handleCreateAnnouncement}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition flex items-center gap-1.5">
+                    <Megaphone className="w-4 h-4" /> ประกาศ
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              {announcements.length === 0 ? (
+                <div className="py-12 text-center"><Megaphone className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 font-medium">ยังไม่มีประกาศ</p></div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b border-gray-100 bg-gray-50/50">
+                      <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase">หัวข้อ</th>
+                      <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase">ประเภท</th>
+                      <th className="text-center px-3 py-3 font-medium text-gray-500 text-xs uppercase">สถานะ</th>
+                      <th className="text-right px-3 py-3 font-medium text-gray-500 text-xs uppercase">สร้างเมื่อ</th>
+                      <th className="text-center px-3 py-3 font-medium text-gray-500 text-xs uppercase w-[120px]">จัดการ</th>
+                    </tr></thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {announcements.map(a => (
+                        <tr key={a.id} className="hover:bg-purple-50/30 transition">
+                          <td className="px-4 py-3.5">
+                            <p className="font-medium text-gray-800">{a.title}</p>
+                            <p className="text-xs text-gray-400 line-clamp-1 mt-0.5">{a.content}</p>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                              a.type === 'info' ? 'bg-blue-100 text-blue-700' :
+                              a.type === 'warning' ? 'bg-amber-100 text-amber-700' :
+                              a.type === 'success' ? 'bg-green-100 text-green-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {a.type === 'info' ? '📢 ข้อมูล' : a.type === 'warning' ? '⚠️ เตือน' : a.type === 'success' ? '✅ สำเร็จ' : '🚫 สำคัญ'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3.5 text-center">
+                            <button onClick={() => handleToggleAnnouncement(a.id, a.is_active)}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition hover:opacity-80 ${
+                                a.is_active ? 'bg-green-100 text-green-700 hover:bg-red-50 hover:text-red-600' : 'bg-gray-100 text-gray-500 hover:bg-green-50 hover:text-green-600'
+                              }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${a.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
+                              {a.is_active ? 'เปิด' : 'ปิด'}
+                            </button>
+                          </td>
+                          <td className="px-3 py-3.5 text-right text-xs text-gray-400">
+                            {new Date(a.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="px-3 py-3.5 text-center">
+                            <button onClick={() => handleDeleteAnnouncement(a.id)}
+                              className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600" title="ลบ">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Reset Password Modal */}

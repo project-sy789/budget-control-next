@@ -386,13 +386,22 @@ export default function UserManagementPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     {isEditing ? (
-                      <select value={editRole} onChange={e => setEditRole(e.target.value)}
-                        className="text-xs border border-purple-200 rounded px-1.5 py-0.5">
-                        <option value="pending">รออนุมัติ</option>
-                        <option value="user">ผู้ใช้</option>
-                        <option value="manager">ผู้จัดการ</option>
-                        <option value="admin">ผู้ดูแล</option>
-                      </select>
+                      user.id === currentUserId ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-400" title="ไม่สามารถเปลี่ยนบทบาทของตัวเองได้">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColors[user.role]}`}>
+                            {roleLabels[user.role]}
+                          </span>
+                          <span className="text-[10px]">🔒</span>
+                        </span>
+                      ) : (
+                        <select value={editRole} onChange={e => setEditRole(e.target.value)}
+                          className="text-xs border border-purple-200 rounded px-1.5 py-0.5">
+                          <option value="pending">รออนุมัติ</option>
+                          <option value="user">ผู้ใช้</option>
+                          <option value="manager">ผู้จัดการ</option>
+                          <option value="admin">ผู้ดูแล</option>
+                        </select>
+                      )
                     ) : (
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColors[user.role]}`}>
                         {roleLabels[user.role]}
